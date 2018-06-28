@@ -67,10 +67,10 @@ namespace Depends.Core
             var libraries = lockFile.Targets.Single(x => x.TargetFramework == targetFramework)
                 .Libraries.Where(x => x.IsPackage()).ToList();
 
-            var builder = new DependencyGraph.Builder();
-            builder.WithNode(new ProjectReferenceNode(projectPath));
+            var projectNode = new ProjectReferenceNode(projectPath);
+            var builder = new DependencyGraph.Builder(projectNode);
 
-            var libraryNodes = new Dictionary<string, PackageReferenceNode>();
+            var libraryNodes = new Dictionary<string, PackageReferenceNode>(StringComparer.OrdinalIgnoreCase);
             foreach (var library in libraries)
             {
                 var libraryNode = library.ToNode();
@@ -86,7 +86,7 @@ namespace Depends.Core
                     .Select(x => new AssemblyReferenceNode(x));
                 builder.WithNodes(frameworkAssemblyNodes);
                 builder.WithEdges(frameworkAssemblyNodes
-                    .Select(x => new Edge(libraryNode, x, "<<Framework Assembly>>")));
+                    .Select(x => new Edge(libraryNode, x)));
             }
 
             foreach (var library in libraries)
@@ -99,6 +99,15 @@ namespace Depends.Core
                         .Select(x => new Edge(libraryNode, libraryNodes[x.Id], x.VersionRange.ToString())));
                 }
             }
+
+            builder.WithEdges(projectInstance.GetItems("PackageReference")
+                .Select(x => new Edge(projectNode, libraryNodes[x.EvaluatedInclude])));
+
+            var references = projectInstance.GetItems("Reference").Where(x => !x.HasMetadata("NuGetPackageId"))
+                .Select(x => new AssemblyReferenceNode(x.EvaluatedInclude));
+
+            builder.WithNodes(references);
+            builder.WithEdges(references.Select(x => new Edge(projectNode, x)));
 
             return builder.Build();
         }

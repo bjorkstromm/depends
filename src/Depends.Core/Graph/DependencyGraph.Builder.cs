@@ -6,8 +6,15 @@ namespace Depends.Core.Graph
     {
 		public sealed class Builder
 		{
+		    private readonly Node _root;
 		    private HashSet<Node> _nodes = new HashSet<Node>();
 		    private HashSet<Edge> _edges = new HashSet<Edge>();
+
+		    public Builder(Node root)
+		    {
+		        _root = root;
+		        _nodes.Add(root);
+		    }
 
 		    public Builder WithEdges(IEnumerable<Edge> edges)
 		    {
@@ -43,7 +50,7 @@ namespace Depends.Core.Graph
 
             public DependencyGraph Build()
 		    {
-				return new DependencyGraph(_nodes, _edges);
+				return new DependencyGraph(_root, _nodes, _edges);
 		    }
 		}
     }
