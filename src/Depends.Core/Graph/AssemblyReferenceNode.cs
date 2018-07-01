@@ -5,5 +5,7 @@
         public AssemblyReferenceNode(string assemblyName) : base(assemblyName)
         {
         }
+
+        public override string Type { get; } = "Assembly";
     }
 }

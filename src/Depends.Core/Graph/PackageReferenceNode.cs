@@ -15,6 +15,8 @@ namespace Depends.Core.Graph
             Version = version ?? throw new ArgumentNullException(nameof(version));
         }
 
+        public override string Type { get; } = "Package";
+
         public override string ToString()
         {
             return string.Format(CultureInfo.InvariantCulture, "{0}.{1}", PackageId, Version);

@@ -6,6 +6,8 @@ namespace Depends.Core.Graph
     {
         public string Id { get; }
 
+        public abstract string Type { get; }
+
         protected Node(string id)
         {
             if (string.IsNullOrWhiteSpace(id))
