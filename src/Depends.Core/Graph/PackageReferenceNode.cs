@@ -19,7 +19,7 @@ namespace Depends.Core.Graph
 
         public override string ToString()
         {
-            return string.Format(CultureInfo.InvariantCulture, "{0}.{1}", PackageId, Version);
+            return string.Format(CultureInfo.InvariantCulture, "{0} {1}", PackageId, Version);
         }
     }
 }

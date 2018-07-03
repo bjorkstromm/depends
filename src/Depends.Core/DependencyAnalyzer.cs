@@ -15,11 +15,12 @@ namespace Depends.Core
     public class DependencyAnalyzer
     {
         private ILogger _logger;
+        private ILoggerFactory _loggerFactory;
 
         public DependencyAnalyzer(ILoggerFactory loggerFactory)
         {
-            _logger = loggerFactory?.CreateLogger(typeof(DependencyAnalyzer)) ??
-                      throw new ArgumentNullException(nameof(loggerFactory));
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
+            _logger = _loggerFactory.CreateLogger(typeof(DependencyAnalyzer));
         }
 
         public DependencyGraph Analyze(string projectPath)
@@ -34,7 +35,10 @@ namespace Depends.Core
                 throw new ArgumentException("Project path does not exist.", nameof(projectPath));
             }
 
-            var analyzerManager = new AnalyzerManager();
+            var analyzerManager = new AnalyzerManager(new AnalyzerManagerOptions
+            {
+                LoggerFactory = _loggerFactory
+            });
             var projectAnalyzer = analyzerManager.GetProject(projectPath);
 
             var projectInstance = projectAnalyzer.Compile();
@@ -77,16 +81,37 @@ namespace Depends.Core
                 builder.WithNode(libraryNode);
                 libraryNodes.Add(libraryNode.PackageId, libraryNode);
 
-                if (library.FrameworkAssemblies.Count <= 0)
+                if (library.FrameworkAssemblies.Count > 0)
                 {
-                    continue;
+                    var assemblyNodes = library.FrameworkAssemblies
+                        .Select(x => new AssemblyReferenceNode(x));
+                    builder.WithNodes(assemblyNodes);
+                    builder.WithEdges(assemblyNodes
+                        .Select(x => new Edge(libraryNode, x)));
                 }
 
-                var frameworkAssemblyNodes = library.FrameworkAssemblies
-                    .Select(x => new AssemblyReferenceNode(x));
-                builder.WithNodes(frameworkAssemblyNodes);
-                builder.WithEdges(frameworkAssemblyNodes
-                    .Select(x => new Edge(libraryNode, x)));
+                if (library.RuntimeAssemblies.Count > 0)
+                {
+                    var assemblyNodes = library.RuntimeAssemblies
+                        .Select(x => new AssemblyReferenceNode(Path.GetFileName(x.Path)))
+                        .Where(x => x.Id != "_._");
+
+                    if (assemblyNodes.Any())
+                    {
+                        builder.WithNodes(assemblyNodes);
+                        builder.WithEdges(assemblyNodes
+                            .Select(x => new Edge(libraryNode, x)));
+                    }
+                }
+
+                //if (library.CompileTimeAssemblies.Count > 0)
+                //{
+                //    var assemblyNodes = library.CompileTimeAssemblies
+                //        .Select(x => new AssemblyReferenceNode(Path.GetFileName(x.Path)));
+                //    builder.WithNodes(assemblyNodes);
+                //    builder.WithEdges(assemblyNodes
+                //        .Select(x => new Edge(libraryNode, x)));
+                //}
             }
 
             foreach (var library in libraries)
@@ -101,10 +126,10 @@ namespace Depends.Core
             }
 
             builder.WithEdges(projectInstance.GetItems("PackageReference")
-                .Select(x => new Edge(projectNode, libraryNodes[x.EvaluatedInclude])));
+                .Select(x => new Edge(projectNode, libraryNodes[x.EvaluatedInclude], x.GetMetadataValue("Version"))));
 
-            var references = projectInstance.GetItems("Reference").Where(x => !x.HasMetadata("NuGetPackageId"))
-                .Select(x => new AssemblyReferenceNode(x.EvaluatedInclude));
+            var references = projectInstance.GetItems("Reference")
+                .Select(x => new AssemblyReferenceNode(Path.GetFileName(x.EvaluatedInclude)));
 
             builder.WithNodes(references);
             builder.WithEdges(references.Select(x => new Edge(projectNode, x)));
