@@ -89,8 +89,16 @@ namespace Depends
             right.Add(runtimeDepends, packageDepends, reverseDepends);
             top.Add(left, right);
 
+            dependenciesView.SelectedItem = 0;
+            UpdateLists();
 
-            dependenciesView.SelectedChanged += () =>
+            dependenciesView.SelectedChanged += UpdateLists;
+
+            Application.Run();
+
+            return 0;
+
+            void UpdateLists()
             {
                 var selectedNode = orderedDependencyList[dependenciesView.SelectedItem];
 
@@ -99,12 +107,8 @@ namespace Depends
                 packageDependsView.SetSource(graph.Edges.Where(x => x.Start.Equals(selectedNode) && x.End is PackageReferenceNode)
                     .Select(x => $"{x.End}{(string.IsNullOrEmpty(x.Label) ? string.Empty : " (Wanted: " + x.Label + ")")}").ToImmutableList());
                 reverseDependsView.SetSource(graph.Edges.Where(x => x.End.Equals(selectedNode))
-                    .Select(x => $"{x.Start}{(string.IsNullOrEmpty(x.Label) ? string.Empty : " (Wanted: "+ x.Label + ")")}").ToImmutableList());
-            };
-
-            Application.Run();
-
-            return 0;
+                    .Select(x => $"{x.Start}{(string.IsNullOrEmpty(x.Label) ? string.Empty : " (Wanted: " + x.Label + ")")}").ToImmutableList());
+            }
         }
     }
 }
