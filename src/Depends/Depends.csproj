@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="2.1.1" />
+    <PackageReference Include="Spectre.Cli" Version="0.13.0" />
     <PackageReference Include="Terminal.Gui" Version="0.15.0" />
   </ItemGroup>
 

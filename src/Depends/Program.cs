@@ -1,30 +1,29 @@
 using System;
 using System.Collections.Immutable;
-using System.IO;
+using System.ComponentModel;
 using System.Linq;
 using Depends.Core;
 using Depends.Core.Graph;
-using Depends.Core.Output;
 using Microsoft.Extensions.Logging;
+using Spectre.Cli;
 using Terminal.Gui;
 
 namespace Depends
 {
-    class Program
+    internal class Program
     {
-        public static int Main(string[] args)
-        {
-            var loggerFactory = new LoggerFactory().AddConsole();
-            var analyzer = new DependencyAnalyzer(loggerFactory);
-            var graph = analyzer.Analyze(args[0]);
+        public static int Main(string[] args) => new CommandApp<RootCommand>().Run(args);
+    }
 
-            //using (var writer = File.CreateText(Path.ChangeExtension(args[0], ".gv")))
-            //{
-            //    new DotFileWriter
-            //    {
-            //        GraphName = Path.GetFileName(args[0])
-            //    }.Write(graph, writer);
-            //}
+    [Description("")]
+    internal class RootCommand : Command<Settings>
+    {
+        public override int Execute(CommandContext context, Settings settings)
+        {
+            var loggerFactory = new LoggerFactory()
+                .AddConsole(settings.Verbosity);
+            var analyzer = new DependencyAnalyzer(loggerFactory);
+            var graph = analyzer.Analyze(settings.ProjectPath);
 
             Application.Init();
 
@@ -110,5 +109,25 @@ namespace Depends
                     .Select(x => $"{x.Start}{(string.IsNullOrEmpty(x.Label) ? string.Empty : " (Wanted: " + x.Label + ")")}").ToImmutableList());
             }
         }
+    }
+
+    internal class Settings : CommandSettings
+    {
+        public override ValidationResult Validate()
+        {
+            if (string.IsNullOrEmpty(ProjectPath))
+            {
+                // TODO: Look in dir
+                return ValidationResult.Error("");
+            }
+
+            return ValidationResult.Success();
+        }
+
+        [CommandArgument(0, "")]
+        public string ProjectPath { get; set; }
+
+        [CommandOption("-v|--verbosity")]
+        public LogLevel Verbosity { get; set; }
     }
 }
