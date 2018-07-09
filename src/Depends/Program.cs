@@ -1,33 +1,65 @@
 using System;
 using System.Collections.Immutable;
-using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.IO;
 using System.Linq;
 using Depends.Core;
 using Depends.Core.Graph;
+using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Logging;
-using Spectre.Cli;
 using Terminal.Gui;
 
 namespace Depends
 {
     internal class Program
     {
-        public static int Main(string[] args) => new CommandApp<RootCommand>().Run(args);
-    }
+        public static int Main(string[] args) => CommandLineApplication.Execute<Program>(args);
 
-    [Description("")]
-    internal class RootCommand : Command<Settings>
-    {
-        public override int Execute(CommandContext context, Settings settings)
+        [Argument(0, Description = "The project file to analyze. If a project file is not specified, Depends searches the current working directory for a file that has a file extension that ends in proj and uses that file.")]
+        // ReSharper disable once UnassignedGetOnlyAutoProperty
+        public string Project { get; set; }
+
+        [Option("-v|--verbosity <LEVEL>", Description = "Sets the verbosity level of the command. Allowed values are Trace, Debug, Information, Warning, Error, Critical, None")]
+        // ReSharper disable once UnassignedGetOnlyAutoProperty
+        public LogLevel Verbosity { get; }
+
+        // ReSharper disable once UnusedMember.Local
+        private ValidationResult OnValidate()
+        {
+            if (!string.IsNullOrWhiteSpace(Project))
+            {
+                return File.Exists(Project)
+                    ? ValidationResult.Success
+                    : new ValidationResult("Project path does not exist.");
+            }
+
+            var csproj = Directory.GetFiles(Directory.GetCurrentDirectory(), "*.csproj", SearchOption.TopDirectoryOnly).ToArray();
+
+            if (!csproj.Any())
+            {
+                return new ValidationResult("Unable to find any project files in working directory.");
+            }
+
+            if (csproj.Length > 1)
+            {
+                return new ValidationResult("More than one project file found in working directory.");
+            }
+
+            Project = csproj[0];
+            return ValidationResult.Success;
+        }
+
+        // ReSharper disable once UnusedMember.Local
+        private void OnExecute()
         {
             var loggerFactory = new LoggerFactory()
-                .AddConsole(settings.Verbosity);
+                .AddConsole(Verbosity);
             var analyzer = new DependencyAnalyzer(loggerFactory);
-            var graph = analyzer.Analyze(settings.ProjectPath);
+            var graph = analyzer.Analyze(Project);
 
             Application.Init();
 
-            var top = Application.Top;
+            var top = new CustomWindow();
 
             var left = new FrameView("Dependencies")
             {
@@ -39,6 +71,10 @@ namespace Depends
                 X = Pos.Right(left),
                 Width = Dim.Fill(),
                 Height = Dim.Fill(1)
+            };
+            var helpText = new Label("Use arrow keys and Tab to move around, Esc to quit.")
+            {
+                Y = Pos.AnchorEnd(1)
             };
 
             var runtimeDepends = new FrameView("Runtime depends")
@@ -63,30 +99,31 @@ namespace Depends
             var dependenciesView = new ListView(orderedDependencyList)
             {
                 CanFocus = true,
-                AllowsMarking = true
+                AllowsMarking = false
             };
             left.Add(dependenciesView);
             var runtimeDependsView = new ListView(Array.Empty<Node>())
             {
                 CanFocus = true,
-                AllowsMarking = true
+                AllowsMarking = false
             };
             runtimeDepends.Add(runtimeDependsView);
             var packageDependsView = new ListView(Array.Empty<Node>())
             {
                 CanFocus = true,
-                AllowsMarking = true
+                AllowsMarking = false
             };
             packageDepends.Add(packageDependsView);
             var reverseDependsView = new ListView(Array.Empty<Node>())
             {
                 CanFocus = true,
-                AllowsMarking = true
+                AllowsMarking = false
             };
             reverseDepends.Add(reverseDependsView);
 
             right.Add(runtimeDepends, packageDepends, reverseDepends);
-            top.Add(left, right);
+            top.Add(left, right, helpText);
+            Application.Top.Add(top);
 
             dependenciesView.SelectedItem = 0;
             UpdateLists();
@@ -94,8 +131,6 @@ namespace Depends
             dependenciesView.SelectedChanged += UpdateLists;
 
             Application.Run();
-
-            return 0;
 
             void UpdateLists()
             {
@@ -109,25 +144,21 @@ namespace Depends
                     .Select(x => $"{x.Start}{(string.IsNullOrEmpty(x.Label) ? string.Empty : " (Wanted: " + x.Label + ")")}").ToImmutableList());
             }
         }
-    }
 
-    internal class Settings : CommandSettings
-    {
-        public override ValidationResult Validate()
+        private class CustomWindow : Window
         {
-            if (string.IsNullOrEmpty(ProjectPath))
+            public CustomWindow() : base("Depends", 0) { }
+
+            public override bool ProcessKey(KeyEvent keyEvent)
             {
-                // TODO: Look in dir
-                return ValidationResult.Error("");
+                if (keyEvent.Key != Key.Esc)
+                {
+                    return base.ProcessKey(keyEvent);
+                }
+
+                Application.RequestStop();
+                return true;
             }
-
-            return ValidationResult.Success();
         }
-
-        [CommandArgument(0, "")]
-        public string ProjectPath { get; set; }
-
-        [CommandOption("-v|--verbosity")]
-        public LogLevel Verbosity { get; set; }
     }
 }
