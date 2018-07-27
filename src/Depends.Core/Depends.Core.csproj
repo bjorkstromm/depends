@@ -5,7 +5,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="buildalyzer" Version="0.5.1" />
+    <PackageReference Include="buildalyzer" Version="1.0.0" />
+    <PackageReference Include="NuGet.ProjectModel" Version="4.7.0" />
   </ItemGroup>
 
 </Project>

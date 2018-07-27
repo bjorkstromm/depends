@@ -19,12 +19,15 @@ namespace Depends.Core.Extensions
 
         public static NuGetFramework GetTargetFramework(this ProjectInstance instance)
         {
-            var targetFrameworkIdentifier = instance.GetPropertyValue("TargetFrameworkIdentifier");
-            var targetFrameworkVersion = instance.GetPropertyValue("TargetFrameworkVersion");
+            var targetFramework = instance.GetItems("_TargetFramework").FirstOrDefault().EvaluatedInclude;
 
-            return NuGetFramework.Parse(
-                $"{targetFrameworkIdentifier},Version={targetFrameworkVersion}",
-                DefaultFrameworkNameProvider.Instance);
+            return NuGetFramework.Parse(targetFramework, DefaultFrameworkNameProvider.Instance);
+            // var targetFrameworkIdentifier = instance.GetPropertyValue("TargetFrameworkIdentifier");
+            // var targetFrameworkVersion = instance.GetPropertyValue("TargetFrameworkVersion");
+
+            // return NuGetFramework.Parse(
+            //     $"{targetFrameworkIdentifier},Version={targetFrameworkVersion}",
+            //     DefaultFrameworkNameProvider.Instance);
         }
     }
 }

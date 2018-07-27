@@ -17,23 +17,29 @@ namespace Depends
 
         [Argument(0, Description = "The project file to analyze. If a project file is not specified, Depends searches the current working directory for a file that has a file extension that ends in proj and uses that file.")]
         // ReSharper disable once UnassignedGetOnlyAutoProperty
-        public string Project { get; set; }
+        public string Project { get; set; } = Directory.GetCurrentDirectory();
 
         [Option("-v|--verbosity <LEVEL>", Description = "Sets the verbosity level of the command. Allowed values are Trace, Debug, Information, Warning, Error, Critical, None")]
         // ReSharper disable once UnassignedGetOnlyAutoProperty
         public LogLevel Verbosity { get; }
 
+        [Option("-f|--framework <FRAMEWORK>", Description = "Analyzes for a specific framework. The framework must be defined in the project file.")]
+        public string Framework { get; }
+
         // ReSharper disable once UnusedMember.Local
         private ValidationResult OnValidate()
         {
-            if (!string.IsNullOrWhiteSpace(Project))
+            if (File.Exists(Project))
             {
-                return File.Exists(Project)
-                    ? ValidationResult.Success
-                    : new ValidationResult("Project path does not exist.");
+                return ValidationResult.Success;
             }
 
-            var csproj = Directory.GetFiles(Directory.GetCurrentDirectory(), "*.csproj", SearchOption.TopDirectoryOnly).ToArray();
+            if (!Directory.Exists(Project))
+            {
+                return new ValidationResult("Project path does not exist.");
+            }
+
+            var csproj = Directory.GetFiles(Project, "*.csproj", SearchOption.TopDirectoryOnly).ToArray();
 
             if (!csproj.Any())
             {
@@ -55,7 +61,7 @@ namespace Depends
             var loggerFactory = new LoggerFactory()
                 .AddConsole(Verbosity);
             var analyzer = new DependencyAnalyzer(loggerFactory);
-            var graph = analyzer.Analyze(Project);
+            var graph = analyzer.Analyze(Project, Framework);
 
             Application.Init();
 

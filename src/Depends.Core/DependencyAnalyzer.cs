@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Buildalyzer;
+using Buildalyzer.Environment;
 using Depends.Core.Extensions;
 using Depends.Core.Graph;
 using Microsoft.Extensions.Logging;
@@ -23,7 +24,7 @@ namespace Depends.Core
             _logger = _loggerFactory.CreateLogger(typeof(DependencyAnalyzer));
         }
 
-        public DependencyGraph Analyze(string projectPath)
+        public DependencyGraph Analyze(string projectPath, string framework = null)
         {
             if (string.IsNullOrWhiteSpace(projectPath))
             {
@@ -41,7 +42,14 @@ namespace Depends.Core
             });
             var projectAnalyzer = analyzerManager.GetProject(projectPath);
 
-            var projectInstance = projectAnalyzer.Compile();
+            // var options = new EnvironmentOptions();
+            // options.TargetsToBuild.Add("GenerateBuildDependencyFile");
+            // options.TargetsToBuild.Add("Build");
+
+            var analyzeResult = string.IsNullOrEmpty(framework) ?
+                projectAnalyzer.Build() : projectAnalyzer.Build(framework);
+
+            var projectInstance = analyzeResult.ProjectInstance;
 
             if (projectInstance == null)
             {
@@ -65,8 +73,7 @@ namespace Depends.Core
 
             var lockFile = new LockFileFormat().Read(projectAssetsFilePath);
 
-            // Todo, support target selecting target framework.
-            var targetFramework = projectInstance.GetTargetFramework();
+            var targetFramework = analyzeResult.GetTargetFramework();
 
             var libraries = lockFile.Targets.Single(x => x.TargetFramework == targetFramework)
                 .Libraries.Where(x => x.IsPackage()).ToList();
