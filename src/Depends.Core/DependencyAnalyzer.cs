@@ -42,10 +42,6 @@ namespace Depends.Core
             });
             var projectAnalyzer = analyzerManager.GetProject(projectPath);
 
-            // var options = new EnvironmentOptions();
-            // options.TargetsToBuild.Add("GenerateBuildDependencyFile");
-            // options.TargetsToBuild.Add("Build");
-
             var analyzeResult = string.IsNullOrEmpty(framework) ?
                 projectAnalyzer.Build() : projectAnalyzer.Build(framework);
 

@@ -7,6 +7,9 @@
   <ItemGroup>
     <PackageReference Include="buildalyzer" Version="1.0.0" />
     <PackageReference Include="NuGet.ProjectModel" Version="4.7.0" />
+
+    <!-- The below is only to not riun into incompatibilites with the NuGet version loaded by MSBuild -->
+    <PackageReference Include="NuGet.Build.Tasks" Version="4.7.0" />
   </ItemGroup>
 
 </Project>
