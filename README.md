@@ -1,2 +1,7 @@
 # depends
-Tool for generating dependency trees for .NET projects
+Dependency explorer for .NET
+
+# installation
+```
+dotnet tool install --global dotnet-depends
+```
