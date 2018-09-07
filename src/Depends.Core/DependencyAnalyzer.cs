@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Buildalyzer;
 using Depends.Core.Extensions;
 using Depends.Core.Graph;
 using Microsoft.Extensions.Logging;
-using NuGet.Commands;
 using NuGet.Configuration;
 using NuGet.Frameworks;
 using NuGet.Packaging.Core;
@@ -16,6 +15,7 @@ using NuGet.ProjectModel;
 using NuGet.Protocol;
 using NuGet.Protocol.Core.Types;
 using NuGet.Versioning;
+using System.Threading.Tasks;
 
 namespace Depends.Core
 {
@@ -30,17 +30,20 @@ namespace Depends.Core
             _logger = _loggerFactory.CreateLogger(typeof(DependencyAnalyzer));
         }
 
-        public DependencyGraph Analyze(PackageIdentity package, string framework)
+        public DependencyGraph Analyze(string packageId, string version, string framework)
         {
+            var package = new PackageIdentity(packageId, NuGetVersion.Parse(version));
             var settings = Settings.LoadDefaultSettings(root: null, configFileName: null, machineWideSettings: null);
             var sourceRepositoryProvider = new SourceRepositoryProvider(settings, Repository.Provider.GetCoreV3());
             var nuGetFramework = NuGetFramework.ParseFolder(framework);
-            var availablePackages = new HashSet<SourcePackageDependencyInfo>();
+            var nugetLogger = _logger.AsNuGetLogger();
 
             using (var cacheContext = new SourceCacheContext())
             {
-                ResolvePackage(package, nuGetFramework, cacheContext, NuGet.Common.NullLogger.Instance, sourceRepositoryProvider.GetRepositories(), availablePackages);
-
+                var resolvedPackages = new ConcurrentDictionary<PackageIdentity, SourcePackageDependencyInfo>(); // <-- Figure out a better thread safe set
+                ResolvePackage(package, nuGetFramework, cacheContext, nugetLogger, sourceRepositoryProvider.GetRepositories(), resolvedPackages).Wait();
+                var availablePackages = new HashSet<SourcePackageDependencyInfo>(resolvedPackages.Values);
+                
 
                 var duplicatePackages = new HashSet<SourcePackageDependencyInfo>(availablePackages
                     .GroupBy(x => x.Id)
@@ -49,7 +52,7 @@ namespace Depends.Core
                     PackageIdentityComparer.Default);
 
                 var prunedPackages = new HashSet<SourcePackageDependencyInfo>();
-                PrunePackages(availablePackages.First(), availablePackages, duplicatePackages, prunedPackages);
+                PrunePackages(resolvedPackages[package], availablePackages, duplicatePackages, prunedPackages);
 
                 var rootNode = new PackageReferenceNode(package.Id, package.Version.ToString());
                 var packageNodes = new Dictionary<string, PackageReferenceNode>(StringComparer.OrdinalIgnoreCase);
@@ -61,8 +64,7 @@ namespace Depends.Core
                     var downloadResult = downloadResource.GetDownloadResourceResultAsync(new PackageIdentity(target.Id, target.Version),
                         new PackageDownloadContext(cacheContext),
                         SettingsUtility.GetGlobalPackagesFolder(settings),
-                        NuGet.Common.NullLogger.Instance,
-                        CancellationToken.None).Result;
+                        nugetLogger, CancellationToken.None).Result;
 
                     var libItems = downloadResult.PackageReader.GetLibItems();
                     var reducer = new FrameworkReducer();
@@ -100,31 +102,31 @@ namespace Depends.Core
             }
         }
 
-        // TODO: Async
-        private void ResolvePackage(PackageIdentity package,
+        private async Task ResolvePackage(PackageIdentity package,
             NuGetFramework framework,
             SourceCacheContext cacheContext,
             NuGet.Common.ILogger logger,
             IEnumerable<SourceRepository> repositories,
-            ISet<SourcePackageDependencyInfo> availablePackages)
+            ConcurrentDictionary<PackageIdentity, SourcePackageDependencyInfo> availablePackages)
         {
-            if (availablePackages.Contains(package))
+            if (availablePackages.ContainsKey(package))
             {
                 return;
             }
 
             foreach (var sourceRepository in repositories)
             {
-                var dependencyInfoResource = sourceRepository.GetResourceAsync<DependencyInfoResource>().Result;
-                var dependencyInfo = dependencyInfoResource.ResolvePackage(
-                    package, framework, cacheContext, logger, CancellationToken.None).Result;
+                var dependencyInfoResource = await sourceRepository.GetResourceAsync<DependencyInfoResource>();
+                var dependencyInfo = await dependencyInfoResource.ResolvePackage(
+                    package, framework, cacheContext, logger, CancellationToken.None);
 
-                availablePackages.Add(dependencyInfo);
-
-                foreach(var dependency in dependencyInfo.Dependencies)
+                if (availablePackages.TryAdd(new PackageIdentity(dependencyInfo.Id, dependencyInfo.Version), dependencyInfo))
                 {
-                    ResolvePackage(new PackageIdentity(dependency.Id, dependency.VersionRange.MinVersion),
-                        framework, cacheContext, logger, repositories, availablePackages);
+                    await Task.WhenAll(dependencyInfo.Dependencies.Select(dependency =>
+                    {
+                        return ResolvePackage(new PackageIdentity(dependency.Id, dependency.VersionRange.MinVersion),
+                            framework, cacheContext, logger, repositories, availablePackages);
+                    }));
                 }
             }
         }

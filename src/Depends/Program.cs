@@ -26,6 +26,13 @@ namespace Depends
         [Option("-f|--framework <FRAMEWORK>", Description = "Analyzes for a specific framework. The framework must be defined in the project file.")]
         public string Framework { get; }
 
+        [Option("--package <PACKAGE>", Description = "Analyzes a specific package.")]
+        public string Package { get; }
+
+        [Option("--version <PACKAGEVERSION>", Description = "The version of the package to analyze.")]
+        public string Version { get; }
+
+
         // ReSharper disable once UnusedMember.Local
         private ValidationResult OnValidate()
         {
@@ -43,7 +50,9 @@ namespace Depends
 
             if (!csproj.Any())
             {
-                return new ValidationResult("Unable to find any project files in working directory.");
+                return string.IsNullOrEmpty(Package) || string.IsNullOrEmpty(Framework) ?
+                    new ValidationResult("Unable to find any project files in working directory.") :
+                    ValidationResult.Success;
             }
 
             if (csproj.Length > 1)
@@ -61,7 +70,10 @@ namespace Depends
             var loggerFactory = new LoggerFactory()
                 .AddConsole(Verbosity);
             var analyzer = new DependencyAnalyzer(loggerFactory);
-            var graph = analyzer.Analyze(Project, Framework);
+
+            var graph = string.IsNullOrEmpty(Package) ?
+                analyzer.Analyze(Project, Framework) :
+                analyzer.Analyze(Package, Version, Framework);
 
             Application.Init();
 
