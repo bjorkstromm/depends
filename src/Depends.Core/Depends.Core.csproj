@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -6,10 +6,11 @@
 
   <ItemGroup>
     <PackageReference Include="buildalyzer" Version="1.0.0" />
-    <PackageReference Include="NuGet.ProjectModel" Version="4.7.0" />
+    <PackageReference Include="NuGet.ProjectModel" Version="4.8.0" />
 
     <!-- The below is only to not riun into incompatibilites with the NuGet version loaded by MSBuild -->
-    <PackageReference Include="NuGet.Build.Tasks" Version="4.7.0" />
+    <PackageReference Include="NuGet.Build.Tasks" Version="4.8.0" />
+    <PackageReference Include="NuGet.Resolver" Version="4.8.0" />
   </ItemGroup>
 
 </Project>

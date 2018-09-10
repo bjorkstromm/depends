@@ -16,6 +16,8 @@ using NuGet.Protocol;
 using NuGet.Protocol.Core.Types;
 using NuGet.Versioning;
 using System.Threading.Tasks;
+using NuGet.Resolver;
+using NuGet.Packaging;
 
 namespace Depends.Core
 {
@@ -40,19 +42,25 @@ namespace Depends.Core
 
             using (var cacheContext = new SourceCacheContext())
             {
-                var resolvedPackages = new ConcurrentDictionary<PackageIdentity, SourcePackageDependencyInfo>(); // <-- Figure out a better thread safe set
-                ResolvePackage(package, nuGetFramework, cacheContext, nugetLogger, sourceRepositoryProvider.GetRepositories(), resolvedPackages).Wait();
+                var repositories = sourceRepositoryProvider.GetRepositories();
+                var resolvedPackages = new ConcurrentDictionary<PackageIdentity, SourcePackageDependencyInfo>(PackageIdentityComparer.Default);
+                ResolvePackage(package, nuGetFramework, cacheContext, nugetLogger, repositories, resolvedPackages).Wait();
+
                 var availablePackages = new HashSet<SourcePackageDependencyInfo>(resolvedPackages.Values);
-                
 
-                var duplicatePackages = new HashSet<SourcePackageDependencyInfo>(availablePackages
-                    .GroupBy(x => x.Id)
-                    .Where(x => x.Count() > 1)
-                    .SelectMany(x => x.OrderByDescending(p => p.Version, VersionComparer.Default).Skip(1)),
-                    PackageIdentityComparer.Default);
+                var resolverContext = new PackageResolverContext(
+                    DependencyBehavior.Lowest,
+                    new[] { packageId },
+                    Enumerable.Empty<string>(),
+                    Enumerable.Empty<PackageReference>(),
+                    Enumerable.Empty<PackageIdentity>(),
+                    availablePackages,
+                    sourceRepositoryProvider.GetRepositories().Select(s => s.PackageSource),
+                    nugetLogger);
 
-                var prunedPackages = new HashSet<SourcePackageDependencyInfo>();
-                PrunePackages(resolvedPackages[package], availablePackages, duplicatePackages, prunedPackages);
+                var resolver = new PackageResolver();
+                var prunedPackages = resolver.Resolve(resolverContext, CancellationToken.None)
+                    .Select(x => resolvedPackages[x]);
 
                 var rootNode = new PackageReferenceNode(package.Id, package.Version.ToString());
                 var packageNodes = new Dictionary<string, PackageReferenceNode>(StringComparer.OrdinalIgnoreCase);
@@ -114,11 +122,26 @@ namespace Depends.Core
                 return;
             }
 
+            // TODO
+            // Avoid getting info for e.g. netstandard1.x if our framework is highet (e.g. netstandard2.0)
+            //if (framework.IsPackageBased &&
+            //    package.Id.Equals("netstandard.library", StringComparison.OrdinalIgnoreCase) &&
+            //    NuGetFrameworkUtility.IsCompatibleWithFallbackCheck(framework,
+            //        NuGetFramework.Parse($"netstandard{package.Version.Major}.{package.Version.Minor}")))
+            //{
+            //    return;
+            //}
+
             foreach (var sourceRepository in repositories)
             {
                 var dependencyInfoResource = await sourceRepository.GetResourceAsync<DependencyInfoResource>();
                 var dependencyInfo = await dependencyInfoResource.ResolvePackage(
                     package, framework, cacheContext, logger, CancellationToken.None);
+
+                if (dependencyInfo == null)
+                {
+                    continue;
+                }
 
                 if (availablePackages.TryAdd(new PackageIdentity(dependencyInfo.Id, dependencyInfo.Version), dependencyInfo))
                 {
@@ -129,37 +152,6 @@ namespace Depends.Core
                     }));
                 }
             }
-        }
-
-        private static void PrunePackages(SourcePackageDependencyInfo target,
-            ISet<SourcePackageDependencyInfo> availablePackages,
-            ISet<SourcePackageDependencyInfo> packagesToRemove,
-            ISet<SourcePackageDependencyInfo> result)
-        {
-            foreach (var dependency in target.Dependencies)
-            {
-
-                if (packagesToRemove.Any(x => dependency.Id.Equals(x.Id, StringComparison.OrdinalIgnoreCase) &&
-                                              dependency.VersionRange.Satisfies(x.Version)))
-                {
-                    continue;
-                }
-
-                if (result.Any(x => dependency.Id.Equals(x.Id, StringComparison.OrdinalIgnoreCase) &&
-                                              dependency.VersionRange.Satisfies(x.Version)))
-                {
-                    continue;
-                }
-
-                PrunePackages(availablePackages.First(x => dependency.Id.Equals(x.Id, StringComparison.OrdinalIgnoreCase) && dependency.VersionRange.Satisfies(x.Version)), availablePackages, packagesToRemove, result);
-            }
-
-            if (packagesToRemove.Contains(target) || result.Contains(target))
-            {
-                return;
-            }
-
-            result.Add(target);
         }
 
         public DependencyGraph Analyze(string projectPath, string framework = null)
