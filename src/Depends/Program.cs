@@ -90,7 +90,7 @@ namespace Depends
                 Width = Dim.Fill(),
                 Height = Dim.Fill(1)
             };
-            var helpText = new Label("Use arrow keys and Tab to move around, Esc to quit.")
+            var helpText = new Label("Use arrow keys and Tab to move around. Ctrl+D to toggle assembly visibility. Esc to quit.")
             {
                 Y = Pos.AnchorEnd(1)
             };
@@ -143,6 +143,10 @@ namespace Depends
             top.Add(left, right, helpText);
             Application.Top.Add(top);
 
+            top.Dependencies = orderedDependencyList;
+            top.VisibleDependencies = orderedDependencyList;
+            top.DependenciesView = dependenciesView;
+
             dependenciesView.SelectedItem = 0;
             UpdateLists();
 
@@ -152,7 +156,7 @@ namespace Depends
 
             void UpdateLists()
             {
-                var selectedNode = orderedDependencyList[dependenciesView.SelectedItem];
+                var selectedNode = top.VisibleDependencies[dependenciesView.SelectedItem];
 
                 runtimeDependsView.SetSource(graph.Edges.Where(x => x.Start.Equals(selectedNode) && x.End is AssemblyReferenceNode)
                     .Select(x => x.End).ToImmutableList());
@@ -167,15 +171,34 @@ namespace Depends
         {
             public CustomWindow() : base("Depends", 0) { }
 
+            public ListView DependenciesView { get; set; }
+            public ImmutableList<Node> Dependencies { get; set; }
+            public ImmutableList<Node> VisibleDependencies { get; set; }
+
+            private bool _assembliesVisible = true;
+
             public override bool ProcessKey(KeyEvent keyEvent)
             {
-                if (keyEvent.Key != Key.Esc)
+                if (keyEvent.Key == Key.Esc)
                 {
-                    return base.ProcessKey(keyEvent);
+                    Application.RequestStop();
+                    return true;
+                }
+                if (keyEvent.Key == Key.ControlD)
+                {
+                    _assembliesVisible = !_assembliesVisible;
+
+                    VisibleDependencies = _assembliesVisible ?
+                        Dependencies :
+                        Dependencies.Where(d => !(d is AssemblyReferenceNode)).ToImmutableList();
+
+                    DependenciesView.SetSource(VisibleDependencies);
+
+                    DependenciesView.SelectedItem = 0;
+                    return true;
                 }
 
-                Application.RequestStop();
-                return true;
+                return base.ProcessKey(keyEvent);
             }
         }
     }
