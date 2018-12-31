@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.IO;
@@ -259,7 +259,9 @@ namespace Depends.Core
                 }
             }
 
+            // Ignore unversioned references like implicit SDK packages
             builder.WithEdges(analyzerResult.GetItems("PackageReference")
+                .Where(x => x.Metadata.ContainsKey("Version"))
                 .Select(x => new Edge(projectNode, libraryNodes[x.ItemSpec], x.Metadata["Version"])));
 
             var references = analyzerResult.References//GetItems("Reference")
