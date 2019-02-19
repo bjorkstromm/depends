@@ -38,6 +38,12 @@ namespace Depends
         {
             if (File.Exists(Project))
             {
+                // Correct relative paths so they work when passed to Uri
+                if (Path.GetFullPath(Project) != Project && File.Exists(Path.GetFullPath(Project)))
+                {
+                    Project = Path.GetFullPath(Project);
+                }
+
                 return ValidationResult.Success;
             }
 
