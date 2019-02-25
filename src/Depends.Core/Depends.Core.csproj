@@ -2,16 +2,16 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="buildalyzer" Version="2.0.0" />
-    <PackageReference Include="NuGet.ProjectModel" Version="4.8.0" />
+    <PackageReference Include="buildalyzer" Version="2.2.0" />
+    <PackageReference Include="NuGet.ProjectModel" Version="4.9.3" />
 
     <!-- The below is only to not riun into incompatibilites with the NuGet version loaded by MSBuild -->
-    <PackageReference Include="NuGet.Build.Tasks" Version="4.8.0" />
-    <PackageReference Include="NuGet.Resolver" Version="4.8.0" />
+    <PackageReference Include="NuGet.Build.Tasks" Version="4.9.3" />
+    <PackageReference Include="NuGet.Resolver" Version="4.9.3" />
   </ItemGroup>
 
 </Project>
