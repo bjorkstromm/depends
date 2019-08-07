@@ -5,7 +5,7 @@
     <ToolCommandName>dotnet-depends</ToolCommandName>
     <PackAsTool>True</PackAsTool>
     <OutputType>Exe</OutputType>
-    <Version>0.3.0</Version>
+    <Version>0.3.1</Version>
     <PackageId>dotnet-depends</PackageId>
     <Title>dotnet-depends</Title>
     <Authors>mholo65</Authors>
