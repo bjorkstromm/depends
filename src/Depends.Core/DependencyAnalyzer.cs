@@ -201,8 +201,10 @@ namespace Depends.Core
             var lockFile = new LockFileFormat().Read(projectAssetsFilePath);
 
             var targetFramework = analyzerResult.GetTargetFramework();
+            var runtimeIdentifier = analyzerResult.GetRuntimeIdentifier();
 
-            var libraries = lockFile.Targets.Single(x => x.TargetFramework == targetFramework)
+            var libraries = lockFile.Targets.Single(
+                x => x.TargetFramework == targetFramework && x.RuntimeIdentifier == runtimeIdentifier)
                 .Libraries.Where(x => x.IsPackage()).ToList();
 
             var projectNode = new ProjectReferenceNode(projectPath);

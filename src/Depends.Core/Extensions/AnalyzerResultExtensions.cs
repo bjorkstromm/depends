@@ -21,6 +21,9 @@ namespace Depends.Core.Extensions
         public static string GetProjectAssetsFilePath(this AnalyzerResult result) =>
             result.GetProperty("ProjectAssetsFile");
 
+        public static string GetRuntimeIdentifier(this AnalyzerResult result) =>
+            result.GetProperty("RuntimeIdentifier");
+
         public static IEnumerable<ProjectItem> GetItems(this AnalyzerResult result, string name) =>
             result.Items.TryGetValue(name, out var items) ? items : Enumerable.Empty<ProjectItem>();
     }
