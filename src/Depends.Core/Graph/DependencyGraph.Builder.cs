@@ -10,7 +10,9 @@ namespace Depends.Core.Graph
 		    private HashSet<Node> _nodes = new HashSet<Node>();
 		    private HashSet<Edge> _edges = new HashSet<Edge>();
 
-		    public Builder(Node root)
+            public Node Root => _root;
+
+            public Builder(Node root)
 		    {
 		        _root = root;
 		        _nodes.Add(root);

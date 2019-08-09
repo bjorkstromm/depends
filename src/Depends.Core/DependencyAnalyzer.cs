@@ -18,6 +18,8 @@ using NuGet.Versioning;
 using System.Threading.Tasks;
 using NuGet.Resolver;
 using NuGet.Packaging;
+using Microsoft.Build.Construction;
+using Depends.Core.Output;
 
 namespace Depends.Core
 {
@@ -154,7 +156,20 @@ namespace Depends.Core
             }
         }
 
-        public DependencyGraph Analyze(string projectPath, string framework = null)
+        public DependencyGraph AnalyzeSolution(string solution, string framework = null)
+        {
+            var solutionInfo = SolutionFile.Parse(solution);
+            var solutionNode = new SolutionReferenceNode(solution);
+            var builder = new DependencyGraph.Builder(solutionNode);
+            foreach (var project in solutionInfo.ProjectsInOrder.Where(p => p.ProjectType == SolutionProjectType.KnownToBeMSBuildFormat))
+            {
+                builder = CreateBuilder(project.AbsolutePath, builder, framework);
+            }
+            
+            return builder.Build();
+        }
+
+        private DependencyGraph.Builder CreateBuilder(string projectPath, DependencyGraph.Builder builder = null, string framework = null)
         {
             if (string.IsNullOrWhiteSpace(projectPath))
             {
@@ -208,7 +223,15 @@ namespace Depends.Core
                 .Libraries.Where(x => x.IsPackage()).ToList();
 
             var projectNode = new ProjectReferenceNode(projectPath);
-            var builder = new DependencyGraph.Builder(projectNode);
+            if (builder == null)
+            {
+                builder = new DependencyGraph.Builder(projectNode);
+            }
+            else
+            {
+                builder.WithNode(projectNode);
+                builder.WithEdge(new Edge(builder.Root, projectNode));
+            }
 
             var libraryNodes = new Dictionary<string, PackageReferenceNode>(StringComparer.OrdinalIgnoreCase);
             foreach (var library in libraries)
@@ -272,7 +295,12 @@ namespace Depends.Core
             builder.WithNodes(references);
             builder.WithEdges(references.Select(x => new Edge(projectNode, x)));
 
-            return builder.Build();
+            return builder;
+        }
+
+        public DependencyGraph Analyze(string projectPath, string framework = null)
+        {
+            return CreateBuilder(projectPath, null, framework).Build();
         }
     }
 }

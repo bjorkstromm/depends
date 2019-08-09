@@ -32,6 +32,8 @@ namespace Depends
         [Option("--version <PACKAGEVERSION>", Description = "The version of the package to analyze.")]
         public string Version { get; }
 
+        [Option("-s|--solution", Description = "Solution mode, analyze solution rather than a project")]
+        private bool SolutionMode { get; set; }
 
         // ReSharper disable once UnusedMember.Local
         private ValidationResult OnValidate()
@@ -52,21 +54,22 @@ namespace Depends
                 return new ValidationResult("Project path does not exist.");
             }
 
-            var csproj = Directory.GetFiles(Project, "*.csproj", SearchOption.TopDirectoryOnly).ToArray();
+            var candidateFiles = Directory.GetFiles(Project, SolutionMode ? "*.sln" : "*.csproj", SearchOption.TopDirectoryOnly).ToArray();
 
-            if (!csproj.Any())
+            var analysisType = SolutionMode ? "solution" : "project";
+            if (!candidateFiles.Any())
             {
-                return string.IsNullOrEmpty(Package) || string.IsNullOrEmpty(Framework) ?
-                    new ValidationResult("Unable to find any project files in working directory.") :
-                    ValidationResult.Success;
+                return string.IsNullOrEmpty(Package) || string.IsNullOrEmpty(Framework)
+                    ? new ValidationResult($"Unable to find any {analysisType} file in working directory.")
+                    : ValidationResult.Success;
             }
 
-            if (csproj.Length > 1)
+            if (candidateFiles.Length > 1)
             {
-                return new ValidationResult("More than one project file found in working directory.");
+                return new ValidationResult($"More than one {analysisType} files found in working directory.");
             }
 
-            Project = csproj[0];
+            Project = candidateFiles[0];
             return ValidationResult.Success;
         }
 
@@ -77,9 +80,19 @@ namespace Depends
                 .AddConsole(Verbosity);
             var analyzer = new DependencyAnalyzer(loggerFactory);
 
-            var graph = string.IsNullOrEmpty(Package) ?
-                analyzer.Analyze(Project, Framework) :
-                analyzer.Analyze(Package, Version, Framework);
+            DependencyGraph graph;
+            if (!string.IsNullOrEmpty(Package))
+            {
+                graph = analyzer.Analyze(Package, Version, Framework);
+            }
+            else if (SolutionMode)
+            {
+                graph = analyzer.AnalyzeSolution(Project, Framework);
+            }
+            else
+            {
+                graph = analyzer.Analyze(Project, Framework);
+            }
 
             Application.Init();
 
