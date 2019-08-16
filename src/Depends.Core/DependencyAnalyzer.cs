@@ -158,19 +158,28 @@ namespace Depends.Core
 
         public DependencyGraph AnalyzeSolution(string solution, string framework = null)
         {
-            var solutionInfo = SolutionFile.Parse(solution);
+            var analyzerManager = new AnalyzerManager(solution, new AnalyzerManagerOptions
+            {
+                LoggerFactory = _loggerFactory
+            });
+
             var solutionNode = new SolutionReferenceNode(solution);
             var builder = new DependencyGraph.Builder(solutionNode);
-            foreach (var project in solutionInfo.ProjectsInOrder.Where(p => p.ProjectType == SolutionProjectType.KnownToBeMSBuildFormat))
+            foreach (var project in analyzerManager.Projects.Where(p => p.Value.ProjectInSolution.ProjectType == SolutionProjectType.KnownToBeMSBuildFormat))
             {
-                builder = CreateBuilder(project.AbsolutePath, builder, framework);
+                builder = CreateBuilder(project.Value, project.Key, builder, framework);
             }
             
             return builder.Build();
         }
 
-        private DependencyGraph.Builder CreateBuilder(string projectPath, DependencyGraph.Builder builder = null, string framework = null)
+        public DependencyGraph Analyze(string projectPath, string framework = null)
         {
+            var analyzerManager = new AnalyzerManager( new AnalyzerManagerOptions
+            {
+                LoggerFactory = _loggerFactory
+            });
+
             if (string.IsNullOrWhiteSpace(projectPath))
             {
                 throw new ArgumentException(nameof(projectPath));
@@ -181,12 +190,12 @@ namespace Depends.Core
                 throw new ArgumentException("Project path does not exist.", nameof(projectPath));
             }
 
-            var analyzerManager = new AnalyzerManager(new AnalyzerManagerOptions
-            {
-                LoggerFactory = _loggerFactory
-            });
             var projectAnalyzer = analyzerManager.GetProject(projectPath);
+            return CreateBuilder(projectAnalyzer, projectPath, null, framework).Build();
+        }
 
+        private DependencyGraph.Builder CreateBuilder(ProjectAnalyzer  projectAnalyzer, string projectPath, DependencyGraph.Builder builder = null, string framework = null)
+        {
             var analyzeResults = string.IsNullOrEmpty(framework) ?
                 projectAnalyzer.Build() : projectAnalyzer.Build(framework);
 
@@ -296,11 +305,6 @@ namespace Depends.Core
             builder.WithEdges(references.Select(x => new Edge(projectNode, x)));
 
             return builder;
-        }
-
-        public DependencyGraph Analyze(string projectPath, string framework = null)
-        {
-            return CreateBuilder(projectPath, null, framework).Build();
         }
     }
 }
