@@ -11,7 +11,7 @@
     <Authors>mholo65</Authors>
     <Description>Dependency explorer for .NET</Description>
     <Copyright>2018 Martin Björkström</Copyright>
-    <PackageLicense>MIT</PackageLicense>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/mholo65/depends</PackageProjectUrl>
   </PropertyGroup>
 
