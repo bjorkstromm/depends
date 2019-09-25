@@ -32,52 +32,84 @@ namespace Depends
         [Option("--version <PACKAGEVERSION>", Description = "The version of the package to analyze.")]
         public string Version { get; }
 
-        [Option("-s|--solution", Description = "Solution mode, analyze solution rather than a project")]
-        private bool SolutionMode { get; set; }
-
+        // Following method derived from dotnet-outdated, licensed under MIT
+        // MIT License
+        //
+        // Copyright (c) 2018 Jerrie Pelser
+        //
+        // Permission is hereby granted, free of charge, to any person obtaining a copy
+        // of this software and associated documentation files (the "Software"), to deal
+        // in the Software without restriction, including without limitation the rights
+        // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        // copies of the Software, and to permit persons to whom the Software is
+        // furnished to do so, subject to the following conditions:
+        //
+        // The above copyright notice and this permission notice shall be included in all
+        // copies or substantial portions of the Software.
+        //
+        // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        // SOFTWARE.
+        //
+        // https://github.com/jerriep/dotnet-outdated/blob/b2c9e99c530a64e246ac529bbdc42ddde19b1e1a/src/DotNetOutdated.Core/Services/ProjectDiscoveryService.cs
         // ReSharper disable once UnusedMember.Local
         private ValidationResult OnValidate()
         {
-            if (File.Exists(Project))
-            {
-                // Correct relative paths so they work when passed to Uri
-                if (Path.GetFullPath(Project) != Project && File.Exists(Path.GetFullPath(Project)))
-                {
-                    Project = Path.GetFullPath(Project);
-                }
-
-                return ValidationResult.Success;
-            }
-
-            if (!Directory.Exists(Project))
+            if (!(File.Exists(Project) || Directory.Exists(Project)))
             {
                 return new ValidationResult("Project path does not exist.");
             }
 
-            var candidateFiles = Directory.GetFiles(Project, SolutionMode ? "*.sln" : "*.csproj", SearchOption.TopDirectoryOnly).ToArray();
-
-            var analysisType = SolutionMode ? "solution" : "project";
-            if (!candidateFiles.Any())
+            var fileAttributes = File.GetAttributes(Project);
+            
+            // If a directory was passed in, search for a .sln or .proj file
+            if (fileAttributes.HasFlag(FileAttributes.Directory))
             {
-                return string.IsNullOrEmpty(Package) || string.IsNullOrEmpty(Framework)
-                    ? new ValidationResult($"Unable to find any {analysisType} file in working directory.")
-                    : ValidationResult.Success;
+                // Search for solution(s)
+                var solutionFiles = Directory.GetFiles(Project, "*.sln");
+                if (solutionFiles.Length == 1)
+                {
+                    Project = Path.GetFullPath(solutionFiles[0]);
+                    return ValidationResult.Success;
+                }
+                
+                if (solutionFiles.Length > 1)
+                {
+                    return new ValidationResult($"More than one solution file found in working directory.");
+                }
+                
+                // We did not find any solutions, so try and find individual projects
+                var projectFiles = Directory.GetFiles(Project, "*.*proj").ToArray();
+
+                if (projectFiles.Length == 1)
+                {
+                    Project = Path.GetFullPath(projectFiles[0]);
+                    return ValidationResult.Success;
+                }
+                
+                if (projectFiles.Length > 1)
+                {
+                    return new ValidationResult($"More than one project file found in working directory.");
+                }
+
+                // At this point the path contains no solutions or projects, so throw an exception
+                new ValidationResult($"Unable to find any solution or project files in working directory.");
             }
 
-            if (candidateFiles.Length > 1)
-            {
-                return new ValidationResult($"More than one {analysisType} files found in working directory.");
-            }
-
-            Project = candidateFiles[0];
+            Project = Path.GetFullPath(Project);
             return ValidationResult.Success;
         }
 
         // ReSharper disable once UnusedMember.Local
         private void OnExecute()
         {
-            var loggerFactory = new LoggerFactory()
-                .AddConsole(Verbosity);
+            var loggerFactory = LoggerFactory.Create(builder => builder
+                .SetMinimumLevel(Verbosity)
+                .AddConsole());
             var analyzer = new DependencyAnalyzer(loggerFactory);
 
             DependencyGraph graph;
@@ -85,7 +117,7 @@ namespace Depends
             {
                 graph = analyzer.Analyze(Package, Version, Framework);
             }
-            else if (SolutionMode)
+            else if (Path.GetExtension(Project).Equals(".sln", StringComparison.OrdinalIgnoreCase))
             {
                 graph = analyzer.AnalyzeSolution(Project, Framework);
             }
