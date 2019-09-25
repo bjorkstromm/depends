@@ -59,6 +59,10 @@ namespace Depends.Core.Output
                 {
                     writer.WriteLine($"\"{node.Id}\" [label=\"{node}\" style=filled fillcolor=grey];");
                 }
+                else if (node.Type == "Solution")
+                {
+                    writer.WriteLine($"\"{node.Id}\" [label=\"{node}\" style=filled fillcolor=red];");
+                }
             }
 
             writer.WriteLine("}");
