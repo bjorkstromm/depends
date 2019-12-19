@@ -207,30 +207,6 @@ namespace Depends.Core
                 // Todo: Something went wrong, log and return better exception.
                 throw new InvalidOperationException("Unable to load project.");
             }
-
-            if (!analyzerResult.IsNetSdkProject())
-            {
-                // Todo: Support "legacy" projects in the future.
-                throw new InvalidOperationException("Unable to load project.");
-            }
-
-            var projectAssetsFilePath = analyzerResult.GetProjectAssetsFilePath();
-
-            if (!File.Exists(projectAssetsFilePath))
-            {
-                // Todo: Make sure this exists in future
-                throw new InvalidOperationException($"{projectAssetsFilePath} not found. Please run 'dotnet restore'");
-            }
-
-            var lockFile = new LockFileFormat().Read(projectAssetsFilePath);
-
-            var targetFramework = analyzerResult.GetTargetFramework();
-            var runtimeIdentifier = analyzerResult.GetRuntimeIdentifier();
-
-            var libraries = lockFile.Targets.Single(
-                x => x.TargetFramework == targetFramework && x.RuntimeIdentifier == runtimeIdentifier)
-                .Libraries.Where(x => x.IsPackage()).ToList();
-
             var projectNode = new ProjectReferenceNode(projectPath);
             if (builder == null)
             {
@@ -242,64 +218,100 @@ namespace Depends.Core
                 builder.WithEdge(new Edge(builder.Root, projectNode));
             }
 
-            var libraryNodes = new Dictionary<string, PackageReferenceNode>(StringComparer.OrdinalIgnoreCase);
-            foreach (var library in libraries)
+            var projectAssetsFilePath = analyzerResult.GetProjectAssetsFilePath();
+
+            if (!File.Exists(projectAssetsFilePath))
             {
-                var libraryNode = library.ToNode();
-                builder.WithNode(libraryNode);
-                libraryNodes.Add(libraryNode.PackageId, libraryNode);
-
-                if (library.FrameworkAssemblies.Count > 0)
+                if (analyzerResult.IsNetSdkProject())
                 {
-                    var assemblyNodes = library.FrameworkAssemblies
-                        .Select(x => new AssemblyReferenceNode($"{x}.dll"));
-                    builder.WithNodes(assemblyNodes);
-                    builder.WithEdges(assemblyNodes
-                        .Select(x => new Edge(libraryNode, x)));
+                    // a new project doesn't have an asset file
+                    throw new InvalidOperationException($"{projectAssetsFilePath} not found. Please run 'dotnet restore'");
                 }
+                
+                // Old csproj
 
-                if (library.RuntimeAssemblies.Count > 0)
+                var oldStylePackageReferences = analyzerResult.GetItems("Reference").Where(x => x.ItemSpec.Contains("Version"));
+                foreach (var reference in oldStylePackageReferences)
                 {
-                    var assemblyNodes = library.RuntimeAssemblies
-                        .Select(x => new AssemblyReferenceNode(Path.GetFileName(x.Path)))
-                        .Where(x => x.Id != "_._");
+                    var split = reference.ItemSpec.Split(',');
+                    var version = split.Single(s => s.Contains("Version"))?.Split('=')[1];
+                    var name = reference.ItemSpec.Split(',')[0];
+                    var node = new PackageReferenceNode(name, version);
+                    builder.WithNode(node);
+                    builder.WithEdge(new Edge(projectNode, node, version));
+                }
+            }
+            else
+            {
+                // New csproj
 
-                    if (assemblyNodes.Any())
+                var lockFile = new LockFileFormat().Read(projectAssetsFilePath);
+
+                var targetFramework = analyzerResult.GetTargetFramework();
+                var runtimeIdentifier = analyzerResult.GetRuntimeIdentifier();
+
+                var libraries = lockFile.Targets.Single(
+                        x => x.TargetFramework == targetFramework && x.RuntimeIdentifier == runtimeIdentifier)
+                    .Libraries.Where(x => x.IsPackage()).ToList();
+
+                var libraryNodes = new Dictionary<string, PackageReferenceNode>(StringComparer.OrdinalIgnoreCase);
+                foreach (var library in libraries)
+                {
+                    var libraryNode = library.ToNode();
+                    builder.WithNode(libraryNode);
+                    libraryNodes.Add(libraryNode.PackageId, libraryNode);
+
+                    if (library.FrameworkAssemblies.Count > 0)
                     {
+                        var assemblyNodes = library.FrameworkAssemblies
+                            .Select(x => new AssemblyReferenceNode($"{x}.dll"));
                         builder.WithNodes(assemblyNodes);
                         builder.WithEdges(assemblyNodes
                             .Select(x => new Edge(libraryNode, x)));
                     }
+
+                    if (library.RuntimeAssemblies.Count > 0)
+                    {
+                        var assemblyNodes = library.RuntimeAssemblies
+                            .Select(x => new AssemblyReferenceNode(Path.GetFileName(x.Path)))
+                            .Where(x => x.Id != "_._");
+
+                        if (assemblyNodes.Any())
+                        {
+                            builder.WithNodes(assemblyNodes);
+                            builder.WithEdges(assemblyNodes
+                                .Select(x => new Edge(libraryNode, x)));
+                        }
+                    }
+
+                    //if (library.CompileTimeAssemblies.Count > 0)
+                    //{
+                    //    var assemblyNodes = library.CompileTimeAssemblies
+                    //        .Select(x => new AssemblyReferenceNode(Path.GetFileName(x.Path)));
+                    //    builder.WithNodes(assemblyNodes);
+                    //    builder.WithEdges(assemblyNodes
+                    //        .Select(x => new Edge(libraryNode, x)));
+                    //}
                 }
 
-                //if (library.CompileTimeAssemblies.Count > 0)
-                //{
-                //    var assemblyNodes = library.CompileTimeAssemblies
-                //        .Select(x => new AssemblyReferenceNode(Path.GetFileName(x.Path)));
-                //    builder.WithNodes(assemblyNodes);
-                //    builder.WithEdges(assemblyNodes
-                //        .Select(x => new Edge(libraryNode, x)));
-                //}
-            }
-
-            foreach (var library in libraries)
-            {
-                var libraryNode = library.ToNode();
-
-                if (library.Dependencies.Count > 0)
+                foreach (var library in libraries)
                 {
-                    builder.WithEdges(library.Dependencies
-                        .Select(x => new Edge(libraryNode, libraryNodes[x.Id], x.VersionRange.ToString())));
+                    var libraryNode = library.ToNode();
+
+                    if (library.Dependencies.Count > 0)
+                    {
+                        builder.WithEdges(library.Dependencies
+                            .Select(x => new Edge(libraryNode, libraryNodes[x.Id], x.VersionRange.ToString())));
+                    }
                 }
+
+                // Ignore unversioned references like implicit SDK packages
+                builder.WithEdges(analyzerResult.GetItems("PackageReference")
+                    .Where(x => x.Metadata.ContainsKey("Version"))
+                    .Select(x => new Edge(projectNode, libraryNodes[x.ItemSpec], x.Metadata["Version"])));
             }
 
-            // Ignore unversioned references like implicit SDK packages
-            builder.WithEdges(analyzerResult.GetItems("PackageReference")
-                .Where(x => x.Metadata.ContainsKey("Version"))
-                .Select(x => new Edge(projectNode, libraryNodes[x.ItemSpec], x.Metadata["Version"])));
-
-            var references = analyzerResult.References//GetItems("Reference")
-                .Select(x => new AssemblyReferenceNode(Path.GetFileName(x)));
+            var references = analyzerResult.References.Select(x => new AssemblyReferenceNode(Path.GetFileName(x)));
 
             builder.WithNodes(references);
             builder.WithEdges(references.Select(x => new Edge(projectNode, x)));
