@@ -220,7 +220,16 @@ namespace Depends
 
         private class CustomWindow : Window
         {
-            public CustomWindow() : base("Depends", 0) { }
+            public CustomWindow() : base("Depends", 0)
+            {
+                ColorScheme = new ColorScheme
+                {
+                    Focus = Application.Driver.MakeAttribute(Color.White, Color.Black),
+                    Normal = Application.Driver.MakeAttribute(Color.Black, Color.White),
+                    HotFocus = Application.Driver.MakeAttribute(Color.White, Color.Black),
+                    HotNormal = Application.Driver.MakeAttribute(Color.Blue, Color.White)
+                };
+            }
 
             public ListView DependenciesView { get; set; }
             public ImmutableList<Node> Dependencies { get; set; }
