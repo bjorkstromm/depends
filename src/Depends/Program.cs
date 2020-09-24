@@ -224,10 +224,10 @@ namespace Depends
             {
                 ColorScheme = new ColorScheme
                 {
-                    Focus = Application.Driver.MakeAttribute(Color.White, Color.Black),
-                    Normal = Application.Driver.MakeAttribute(Color.Black, Color.White),
-                    HotFocus = Application.Driver.MakeAttribute(Color.White, Color.Black),
-                    HotNormal = Application.Driver.MakeAttribute(Color.Blue, Color.White)
+                    Focus = Application.Driver.MakeAttribute(Color.Black, Color.White),
+                    Normal = Application.Driver.MakeAttribute(Color.White, Color.Black),
+                    HotFocus = Application.Driver.MakeAttribute(Color.Black, Color.White),
+                    HotNormal = Application.Driver.MakeAttribute(Color.Black, Color.White)
                 };
             }
 
