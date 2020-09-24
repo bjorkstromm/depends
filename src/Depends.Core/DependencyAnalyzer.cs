@@ -25,6 +25,11 @@ namespace Depends.Core
 {
     public class DependencyAnalyzer
     {
+        static DependencyAnalyzer()
+        {
+            _ = typeof(NuGet.Common.LogLevel);
+        }
+
         private ILogger _logger;
         private ILoggerFactory _loggerFactory;
 
@@ -169,7 +174,7 @@ namespace Depends.Core
             {
                 builder = CreateBuilder(project.Value, project.Key, builder, framework);
             }
-            
+
             return builder.Build();
         }
 
@@ -194,7 +199,7 @@ namespace Depends.Core
             return CreateBuilder(projectAnalyzer, projectPath, null, framework).Build();
         }
 
-        private DependencyGraph.Builder CreateBuilder(ProjectAnalyzer  projectAnalyzer, string projectPath, DependencyGraph.Builder builder = null, string framework = null)
+        private DependencyGraph.Builder CreateBuilder(IProjectAnalyzer  projectAnalyzer, string projectPath, DependencyGraph.Builder builder = null, string framework = null)
         {
             var analyzeResults = string.IsNullOrEmpty(framework) ?
                 projectAnalyzer.Build() : projectAnalyzer.Build(framework);
@@ -227,7 +232,7 @@ namespace Depends.Core
                     // a new project doesn't have an asset file
                     throw new InvalidOperationException($"{projectAssetsFilePath} not found. Please run 'dotnet restore'");
                 }
-                
+
                 // Old csproj
 
                 var oldStylePackageReferences = analyzerResult.GetItems("Reference").Where(x => x.ItemSpec.Contains("Version"));

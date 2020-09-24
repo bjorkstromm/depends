@@ -1,17 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>0.4.0</Version>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <Version>0.5.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="buildalyzer" Version="2.3.0" />
-    <PackageReference Include="NuGet.ProjectModel" Version="5.3.0" />
+    <PackageReference Include="Buildalyzer" Version="3.0.1" />
+    <PackageReference Include="NuGet.ProjectModel" Version="5.7.0" />
 
     <!-- The below is only to not run into incompatibilites with the NuGet version loaded by MSBuild -->
-    <PackageReference Include="NuGet.Build.Tasks" Version="5.3.0" />
-    <PackageReference Include="NuGet.Resolver" Version="5.3.0" />
+    <PackageReference Include="NuGet.Build.Tasks" Version="5.7.0" />
+    <PackageReference Include="NuGet.Resolver" Version="5.7.0" />
+    <PackageReference Include="NuGet.Common" Version="5.7.0" />
   </ItemGroup>
 
 </Project>

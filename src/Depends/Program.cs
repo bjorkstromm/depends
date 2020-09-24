@@ -65,7 +65,7 @@ namespace Depends
             }
 
             var fileAttributes = File.GetAttributes(Project);
-            
+
             // If a directory was passed in, search for a .sln or .proj file
             if (fileAttributes.HasFlag(FileAttributes.Directory))
             {
@@ -76,12 +76,12 @@ namespace Depends
                     Project = Path.GetFullPath(solutionFiles[0]);
                     return ValidationResult.Success;
                 }
-                
+
                 if (solutionFiles.Length > 1)
                 {
                     return new ValidationResult($"More than one solution file found in working directory.");
                 }
-                
+
                 // We did not find any solutions, so try and find individual projects
                 var projectFiles = Directory.GetFiles(Project, "*.*proj").ToArray();
 
@@ -90,7 +90,7 @@ namespace Depends
                     Project = Path.GetFullPath(projectFiles[0]);
                     return ValidationResult.Success;
                 }
-                
+
                 if (projectFiles.Length > 1)
                 {
                     return new ValidationResult($"More than one project file found in working directory.");
@@ -110,8 +110,8 @@ namespace Depends
             var loggerFactory = LoggerFactory.Create(builder => builder
                 .SetMinimumLevel(Verbosity)
                 .AddConsole());
-            var analyzer = new DependencyAnalyzer(loggerFactory);
 
+            var analyzer = new DependencyAnalyzer(loggerFactory);
             DependencyGraph graph;
             if (!string.IsNullOrEmpty(Package))
             {
