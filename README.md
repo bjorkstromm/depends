@@ -21,7 +21,7 @@ dotnet tool install --global dotnet-depends
 Once installed, developers can analyze any project from a terminal instance.
 
 ```console
-dotnet-depends ./depends.sln
+dotnet depends ./depends.sln
 ```
 
 ### Local Installation
