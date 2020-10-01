@@ -43,7 +43,7 @@ dotnet tool install dotnet-depends
 To run the tool within a current solution, we need to run the following command.
 
 ```console
- dotnet dotnet-depends ./our-solution.sln
+ dotnet depends ./our-solution.sln
 ```
 
 ## Troubleshooting
