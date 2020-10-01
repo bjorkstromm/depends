@@ -43,7 +43,7 @@ namespace Depends.Core
         {
             var package = new PackageIdentity(packageId, NuGetVersion.Parse(version));
             var settings = Settings.LoadDefaultSettings(root: null, configFileName: null, machineWideSettings: null);
-            var sourceRepositoryProvider = new SourceRepositoryProvider(settings, Repository.Provider.GetCoreV3());
+            var sourceRepositoryProvider = new SourceRepositoryProvider(new PackageSourceProvider(settings), Repository.Provider.GetCoreV3());
             var nuGetFramework = NuGetFramework.ParseFolder(framework);
             var nugetLogger = _logger.AsNuGetLogger();
 
