@@ -12,6 +12,7 @@
     <Copyright>2018 Martin Björkström</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/mholo65/depends</PackageProjectUrl>
+    <PackageIcon>icon.png</PackageIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,6 +27,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Depends.Core\Depends.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../../media/icon.png" Pack="true" PackagePath=""/>
   </ItemGroup>
 
 </Project>
