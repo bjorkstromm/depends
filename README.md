@@ -1,5 +1,7 @@
 # Depends
 
+![CI](https://github.com/mholo65/depends/workflows/CI/badge.svg?branch=master&event=push) [![NuGet](https://img.shields.io/nuget/v/dotnet-depends.svg)](https://www.nuget.org/packages/dotnet-depends)
+
 ![depends logo](./media/Full%20Logo@2x.png)
 
 **Depends** is a [dotnet](https://dot.net) global tool that helps developers explore dependencies found in a .NET Core project (`.csproj`, `.vbproj`, `.fsproj`) or solution (`.sln`).
