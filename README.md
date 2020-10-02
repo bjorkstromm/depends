@@ -2,7 +2,7 @@
 
 ![depends logo](./media/Full%20Logo@2x.png)
 
-**Depends** is a [dotnet](https://dot.net) global tool that helps developers explore dependencies found in a .NET Core project (`.csprpoj`) or solution (`.sln`).
+**Depends** is a [dotnet](https://dot.net) global tool that helps developers explore dependencies found in a .NET Core project (`.csproj`, `.vbproj`, `.fsproj`) or solution (`.sln`).
 
 ![screenshot of depends running in terminal](./media/screenshot.png)
 
