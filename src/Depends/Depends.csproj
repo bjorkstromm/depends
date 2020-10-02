@@ -5,7 +5,6 @@
     <ToolCommandName>dotnet-depends</ToolCommandName>
     <PackAsTool>True</PackAsTool>
     <OutputType>Exe</OutputType>
-    <Version>0.5.0</Version>
     <PackageId>dotnet-depends</PackageId>
     <Title>dotnet-depends</Title>
     <Authors>mholo65</Authors>
@@ -19,6 +18,10 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="3.1.8" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="3.0.0" />
     <PackageReference Include="Terminal.Gui" Version="0.81.0" />
+    <PackageReference Include="MinVer" Version="2.3.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>

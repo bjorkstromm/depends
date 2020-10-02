@@ -2,12 +2,15 @@
 
   <PropertyGroup>
     <TargetFrameworks>netcoreapp2.1;netcoreapp3.1</TargetFrameworks>
-    <Version>0.5.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Buildalyzer" Version="3.0.1" />
     <PackageReference Include="NuGet.ProjectModel" Version="5.7.0" />
+    <PackageReference Include="MinVer" Version="2.3.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
 
     <!-- The below is only to not run into incompatibilites with the NuGet version loaded by MSBuild -->
     <PackageReference Include="NuGet.Build.Tasks" Version="5.7.0" />
