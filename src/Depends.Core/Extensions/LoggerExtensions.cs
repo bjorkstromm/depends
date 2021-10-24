@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using NuGet.Common;
-using Microsoft.Extensions.Logging;
 using MEL = Microsoft.Extensions.Logging;
 using ILogger = NuGet.Common.ILogger;
 using LogLevel = NuGet.Common.LogLevel;
