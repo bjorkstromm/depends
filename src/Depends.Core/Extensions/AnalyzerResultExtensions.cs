@@ -22,6 +22,6 @@ namespace Depends.Core.Extensions
             result.GetProperty("RuntimeIdentifier");
 
         public static IEnumerable<ProjectItem> GetItems(this IAnalyzerResult result, string name) =>
-            result.Items.TryGetValue(name, out var items) ? items : Enumerable.Empty<ProjectItem>();
+            result.Items.TryGetValue(name, out var items) ? (IEnumerable<ProjectItem>)items : Enumerable.Empty<ProjectItem>();
     }
 }
