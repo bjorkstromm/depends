@@ -1,10 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
 using Buildalyzer;
-using Microsoft.Build.Execution;
 using NuGet.Frameworks;
 
 namespace Depends.Core.Extensions
@@ -25,6 +22,6 @@ namespace Depends.Core.Extensions
             result.GetProperty("RuntimeIdentifier");
 
         public static IEnumerable<ProjectItem> GetItems(this IAnalyzerResult result, string name) =>
-            result.Items.TryGetValue(name, out var items) ? items : Enumerable.Empty<ProjectItem>();
+            result.Items.TryGetValue(name, out var items) ? (IEnumerable<ProjectItem>)items : Enumerable.Empty<ProjectItem>();
     }
 }

@@ -12,14 +12,12 @@ using NuGet.Configuration;
 using NuGet.Frameworks;
 using NuGet.Packaging.Core;
 using NuGet.ProjectModel;
-using NuGet.Protocol;
 using NuGet.Protocol.Core.Types;
 using NuGet.Versioning;
 using System.Threading.Tasks;
 using NuGet.Resolver;
 using NuGet.Packaging;
 using Microsoft.Build.Construction;
-using Depends.Core.Output;
 
 namespace Depends.Core
 {
