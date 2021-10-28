@@ -19,9 +19,9 @@ namespace Depends
         // ReSharper disable once UnassignedGetOnlyAutoProperty
         public string Project { get; set; } = Directory.GetCurrentDirectory();
 
-        [Option("-v|--verbosity <LEVEL>", Description = "Sets the verbosity level of the command. Allowed values are Trace, Debug, Information, Warning, Error, Critical, None")]
-        // ReSharper disable once UnassignedGetOnlyAutoProperty
-        public LogLevel Verbosity { get; }
+        [Option("-v|--verbosity <LEVEL>", Description = "Sets the verbosity level of the command. Allowed values are Trace, Debug, Information, Warning, Error, Critical, None. Defaults to Information.")]
+        // ReSharper disable once AutoPropertyCanBeMadeGetOnly.Local, used implicitly by McMaster.Extensions.CommandLineUtils 
+        public LogLevel Verbosity { get; private set; } = LogLevel.Information;
 
         [Option("-f|--framework <FRAMEWORK>", Description = "Analyzes for a specific framework. The framework must be defined in the project file.")]
         public string Framework { get; }
@@ -97,7 +97,7 @@ namespace Depends
                 }
 
                 // At this point the path contains no solutions or projects, so throw an exception
-                new ValidationResult($"Unable to find any solution or project files in working directory.");
+                return new ValidationResult($"Unable to find any solution or project files in working directory.");
             }
 
             Project = Path.GetFullPath(Project);
