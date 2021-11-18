@@ -168,25 +168,33 @@ namespace Depends
             var dependenciesView = new ListView(orderedDependencyList)
             {
                 CanFocus = true,
-                AllowsMarking = false
+                AllowsMarking = false,
+                Width = Dim.Fill(),
+                Height = Dim.Fill()
             };
             left.Add(dependenciesView);
             var runtimeDependsView = new ListView(Array.Empty<Node>())
             {
                 CanFocus = true,
-                AllowsMarking = false
+                AllowsMarking = false,
+                Width = Dim.Fill(),
+                Height = Dim.Fill()
             };
             runtimeDepends.Add(runtimeDependsView);
             var packageDependsView = new ListView(Array.Empty<Node>())
             {
                 CanFocus = true,
-                AllowsMarking = false
+                AllowsMarking = false,
+                Width = Dim.Fill(),
+                Height = Dim.Fill()
             };
             packageDepends.Add(packageDependsView);
             var reverseDependsView = new ListView(Array.Empty<Node>())
             {
                 CanFocus = true,
-                AllowsMarking = false
+                AllowsMarking = false,
+                Width = Dim.Fill(),
+                Height = Dim.Fill()
             };
             reverseDepends.Add(reverseDependsView);
 
@@ -201,7 +209,7 @@ namespace Depends
             dependenciesView.SelectedItem = 0;
             UpdateLists();
 
-            dependenciesView.SelectedChanged += UpdateLists;
+            dependenciesView.SelectedItemChanged += (_) => UpdateLists();
 
             Application.Run();
 
@@ -244,7 +252,7 @@ namespace Depends
                     Application.RequestStop();
                     return true;
                 }
-                if (keyEvent.Key == Key.ControlD)
+                if (keyEvent.Key == (Key.D | Key.CtrlMask))
                 {
                     _assembliesVisible = !_assembliesVisible;
 
