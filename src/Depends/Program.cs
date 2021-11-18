@@ -155,7 +155,7 @@ namespace Depends
             {
                 Y = Pos.Bottom(runtimeDepends),
                 Width = Dim.Fill(),
-                Height = Dim.Percent(50f)
+                Height = Dim.Percent(33f)
             };
             var reverseDepends = new FrameView("Reverse depends")
             {
