@@ -235,7 +235,7 @@ namespace Depends
                     Focus = Application.Driver.MakeAttribute(Color.Black, Color.White),
                     Normal = Application.Driver.MakeAttribute(Color.White, Color.Black),
                     HotFocus = Application.Driver.MakeAttribute(Color.Black, Color.White),
-                    HotNormal = Application.Driver.MakeAttribute(Color.Black, Color.White)
+                    HotNormal = Application.Driver.MakeAttribute(Color.White, Color.Black)
                 };
             }
 
