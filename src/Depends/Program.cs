@@ -127,6 +127,7 @@ namespace Depends
             }
 
             Application.Init();
+            Application.QuitKey = Key.Esc;
 
             var top = new CustomWindow();
 
@@ -244,11 +245,6 @@ namespace Depends
 
             public override bool ProcessKey(KeyEvent keyEvent)
             {
-                if (keyEvent.Key == Key.Esc)
-                {
-                    Application.RequestStop();
-                    return true;
-                }
                 if (keyEvent.Key == (Key.D | Key.CtrlMask))
                 {
                     _assembliesVisible = !_assembliesVisible;
