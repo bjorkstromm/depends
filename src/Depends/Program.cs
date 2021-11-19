@@ -206,14 +206,11 @@ namespace Depends
             top.VisibleDependencies = orderedDependencyList;
             top.DependenciesView = dependenciesView;
 
-            dependenciesView.SelectedItem = 0;
-            UpdateLists();
-
-            dependenciesView.SelectedItemChanged += (_) => UpdateLists();
+            dependenciesView.SelectedItemChanged += UpdateLists;
 
             Application.Run();
 
-            void UpdateLists()
+            void UpdateLists(ListViewItemEventArgs e)
             {
                 var selectedNode = top.VisibleDependencies[dependenciesView.SelectedItem];
 
