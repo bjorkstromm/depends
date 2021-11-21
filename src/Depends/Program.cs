@@ -111,6 +111,16 @@ namespace Depends
                 .SetMinimumLevel(Verbosity)
                 .AddConsole());
 
+            var graph = GetDependencyGraph(loggerFactory);
+
+            Application.Init();
+            Application.QuitKey = Key.Esc;
+            Application.Top.Add(new AppWindow(graph));
+            Application.Run();
+        }
+
+        private DependencyGraph GetDependencyGraph(ILoggerFactory loggerFactory)
+        {
             var analyzer = new DependencyAnalyzer(loggerFactory);
             DependencyGraph graph;
             if (!string.IsNullOrEmpty(Package))
@@ -125,11 +135,7 @@ namespace Depends
             {
                 graph = analyzer.Analyze(Project, Framework);
             }
-
-            Application.Init();
-            Application.QuitKey = Key.Esc;
-            Application.Top.Add(new AppWindow(graph));
-            Application.Run();
+            return graph;
         }
 
         private class AppWindow : Window
