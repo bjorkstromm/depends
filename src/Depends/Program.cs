@@ -154,8 +154,8 @@ namespace Depends
             {
                 _graph = graph ?? throw new ArgumentNullException(nameof(graph));
                 _dependencies = _graph.Nodes.OrderBy(x => x.Id).ToImmutableList();
-                _assembliesVisible = true;
                 _visibleDependencies = _dependencies;
+                _assembliesVisible = true;
 
                 ColorScheme = new ColorScheme
                 {
@@ -235,7 +235,7 @@ namespace Depends
                 Add(left, right, helpText);
 
                 _dependenciesView.SelectedItemChanged += (args) => UpdateLists();
-                _dependenciesView.SetSource(_dependencies);
+                _dependenciesView.SetSource(_visibleDependencies);
             }
 
             public override bool ProcessKey(KeyEvent keyEvent)
