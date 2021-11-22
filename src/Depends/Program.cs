@@ -277,7 +277,11 @@ namespace Depends
 
             private void RuntimeDependsView_OpenSelectedItem(ListViewItemEventArgs args)
             {
-                SetSelectedDependency((Node)args.Value);
+                if(_assembliesVisible)
+                {
+                    SetSelectedDependency((Node)args.Value);
+                }
+                // else: would be nice to provide a feedback so that the user understands that navigation is not possible.
             }
 
             private void PackageDependsView_OpenSelectedItem(ListViewItemEventArgs args)
