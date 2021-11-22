@@ -234,6 +234,8 @@ namespace Depends
                 right.Add(runtimeDepends, packageDepends, reverseDepends);
                 Add(left, right, helpText);
 
+                _runtimeDependsView.OpenSelectedItem += RuntimeDependsView_OpenSelectedItem;
+
                 _dependenciesView.SelectedItemChanged += (args) => UpdateLists();
                 _dependenciesView.SetSource(_visibleDependencies);
             }
@@ -252,6 +254,13 @@ namespace Depends
                 }
 
                 return base.ProcessKey(keyEvent);
+            }
+
+            private void RuntimeDependsView_OpenSelectedItem(ListViewItemEventArgs args)
+            {
+                var index = _visibleDependencies.FindIndex(x => x.Equals(args.Value));
+                _dependenciesView.SelectedItem = index;
+                _dependenciesView.SetFocus();
             }
 
             private void UpdateLists()
