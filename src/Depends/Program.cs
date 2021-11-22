@@ -272,7 +272,7 @@ namespace Depends
 
                     _dependenciesView.SetSource(_visibleDependencies);
                     _lastSelectedDependencyIndex = -1;
-                    _dependenciesView.SelectedItem = 0;
+                    _dependenciesView.SetFocus();
                     return true;
                 }
 
