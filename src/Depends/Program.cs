@@ -144,6 +144,7 @@ namespace Depends
             private readonly ImmutableList<Node> _dependencies;
             private ImmutableList<Node> _visibleDependencies;
             private bool _assembliesVisible;
+            private int _lastSelectedDependencyIndex;
 
             private readonly ListView _dependenciesView;
             private readonly ListView _runtimeDependsView;
@@ -173,6 +174,7 @@ namespace Depends
                 _dependencies = _graph.Nodes.OrderBy(x => x.Id).ToImmutableList();
                 _visibleDependencies = _dependencies;
                 _assembliesVisible = true;
+                _lastSelectedDependencyIndex = -1;
 
                 ColorScheme = new ColorScheme
                 {
@@ -255,7 +257,7 @@ namespace Depends
                 _packageDependsView.OpenSelectedItem += PackageDependsView_OpenSelectedItem;
                 _reverseDependsView.OpenSelectedItem += ReverseDependsView_OpenSelectedItem;
 
-                _dependenciesView.SelectedItemChanged += (args) => UpdateLists();
+                _dependenciesView.SelectedItemChanged += DependenciesView_SelectedItemChanged; ;
                 _dependenciesView.SetSource(_visibleDependencies);
             }
 
@@ -269,11 +271,23 @@ namespace Depends
                         _dependencies.Where(d => !(d is AssemblyReferenceNode)).ToImmutableList();
 
                     _dependenciesView.SetSource(_visibleDependencies);
+                    _lastSelectedDependencyIndex = -1;
                     _dependenciesView.SelectedItem = 0;
                     return true;
                 }
 
                 return base.ProcessKey(keyEvent);
+            }
+
+            private void DependenciesView_SelectedItemChanged(ListViewItemEventArgs args)
+            {
+                // The ListView.SelectedItemChanged event is fired on enter (focus), see https://github.com/migueldeicaza/gui.cs/issues/831
+                // To keep the current selection in the right pane (runtime, package & reverse depends lists), call UpdateLists() only if the selected item has actually been changed.
+                if(_lastSelectedDependencyIndex != args.Item)
+                {
+                    _lastSelectedDependencyIndex = args.Item;
+                    UpdateLists();
+                }
             }
 
             private void RuntimeDependsView_OpenSelectedItem(ListViewItemEventArgs args)
