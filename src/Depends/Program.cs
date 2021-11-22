@@ -150,6 +150,23 @@ namespace Depends
             private readonly ListView _packageDependsView;
             private readonly ListView _reverseDependsView;
 
+            class DependsListItemModel
+            {
+                public Node Node { get; }
+                public string DisplayText { get; }
+
+                public DependsListItemModel(Node node, string label)
+                {
+                    Node = node ?? throw new ArgumentNullException(nameof(node));
+                    DisplayText = $"{node}{(string.IsNullOrEmpty(label) ? string.Empty : " (Wanted: " + label + ")")}";
+                }
+
+                public override string ToString()
+                {
+                    return DisplayText;
+                }
+            }
+
             public AppWindow(DependencyGraph graph) : base("Depends", 0)
             {
                 _graph = graph ?? throw new ArgumentNullException(nameof(graph));
@@ -235,6 +252,8 @@ namespace Depends
                 Add(left, right, helpText);
 
                 _runtimeDependsView.OpenSelectedItem += RuntimeDependsView_OpenSelectedItem;
+                _packageDependsView.OpenSelectedItem += PackageDependsView_OpenSelectedItem;
+                _reverseDependsView.OpenSelectedItem += ReverseDependsView_OpenSelectedItem;
 
                 _dependenciesView.SelectedItemChanged += (args) => UpdateLists();
                 _dependenciesView.SetSource(_visibleDependencies);
@@ -263,6 +282,22 @@ namespace Depends
                 _dependenciesView.SetFocus();
             }
 
+            private void PackageDependsView_OpenSelectedItem(ListViewItemEventArgs args)
+            {
+                var selectedNode = ((DependsListItemModel)args.Value).Node;
+                var index = _visibleDependencies.FindIndex(x => x.Equals(selectedNode));
+                _dependenciesView.SelectedItem = index;
+                _dependenciesView.SetFocus();
+            }
+
+            private void ReverseDependsView_OpenSelectedItem(ListViewItemEventArgs args)
+            {
+                var selectedNode = ((DependsListItemModel)args.Value).Node;
+                var index = _visibleDependencies.FindIndex(x => x.Equals(selectedNode));
+                _dependenciesView.SelectedItem = index;
+                _dependenciesView.SetFocus();
+            }
+
             private void UpdateLists()
             {
                 var selectedNode = _visibleDependencies[_dependenciesView.SelectedItem];
@@ -270,9 +305,9 @@ namespace Depends
                 _runtimeDependsView.SetSource(_graph.Edges.Where(x => x.Start.Equals(selectedNode) && x.End is AssemblyReferenceNode)
                     .Select(x => x.End).ToImmutableList());
                 _packageDependsView.SetSource(_graph.Edges.Where(x => x.Start.Equals(selectedNode) && x.End is PackageReferenceNode)
-                    .Select(x => $"{x.End}{(string.IsNullOrEmpty(x.Label) ? string.Empty : " (Wanted: " + x.Label + ")")}").ToImmutableList());
+                    .Select(x => new DependsListItemModel(x.End, x.Label)).ToImmutableList());
                 _reverseDependsView.SetSource(_graph.Edges.Where(x => x.End.Equals(selectedNode))
-                    .Select(x => $"{x.Start}{(string.IsNullOrEmpty(x.Label) ? string.Empty : " (Wanted: " + x.Label + ")")}").ToImmutableList());
+                    .Select(x => new DependsListItemModel(x.Start, x.Label)).ToImmutableList());
             }
         }
     }
