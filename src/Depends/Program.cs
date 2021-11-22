@@ -269,6 +269,7 @@ namespace Depends
                         _dependencies.Where(d => !(d is AssemblyReferenceNode)).ToImmutableList();
 
                     _dependenciesView.SetSource(_visibleDependencies);
+                    _dependenciesView.SelectedItem = 0;
                     return true;
                 }
 
