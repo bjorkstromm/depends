@@ -277,23 +277,24 @@ namespace Depends
 
             private void RuntimeDependsView_OpenSelectedItem(ListViewItemEventArgs args)
             {
-                var index = _visibleDependencies.FindIndex(x => x.Equals(args.Value));
-                _dependenciesView.SelectedItem = index;
-                _dependenciesView.SetFocus();
+                SetSelectedDependency((Node)args.Value);
             }
 
             private void PackageDependsView_OpenSelectedItem(ListViewItemEventArgs args)
             {
-                var selectedNode = ((DependsListItemModel)args.Value).Node;
-                var index = _visibleDependencies.FindIndex(x => x.Equals(selectedNode));
-                _dependenciesView.SelectedItem = index;
-                _dependenciesView.SetFocus();
+                var node = ((DependsListItemModel)args.Value).Node;
+                SetSelectedDependency(node);
             }
 
             private void ReverseDependsView_OpenSelectedItem(ListViewItemEventArgs args)
             {
-                var selectedNode = ((DependsListItemModel)args.Value).Node;
-                var index = _visibleDependencies.FindIndex(x => x.Equals(selectedNode));
+                var node = ((DependsListItemModel)args.Value).Node;
+                SetSelectedDependency(node);
+            }
+
+            private void SetSelectedDependency(Node node)
+            {
+                var index = _visibleDependencies.FindIndex(x => x.Equals(node));
                 _dependenciesView.SelectedItem = index;
                 _dependenciesView.SetFocus();
             }
