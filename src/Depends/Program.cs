@@ -111,6 +111,16 @@ namespace Depends
                 .SetMinimumLevel(Verbosity)
                 .AddConsole());
 
+            var graph = GetDependencyGraph(loggerFactory);
+
+            Application.Init();
+            Application.QuitKey = Key.Esc;
+            Application.Top.Add(new AppWindow(graph));
+            Application.Run();
+        }
+
+        private DependencyGraph GetDependencyGraph(ILoggerFactory loggerFactory)
+        {
             var analyzer = new DependencyAnalyzer(loggerFactory);
             DependencyGraph graph;
             if (!string.IsNullOrEmpty(Package))
@@ -125,140 +135,199 @@ namespace Depends
             {
                 graph = analyzer.Analyze(Project, Framework);
             }
-
-            Application.Init();
-
-            var top = new CustomWindow();
-
-            var left = new FrameView("Dependencies")
-            {
-                Width = Dim.Percent(50),
-                Height = Dim.Fill(1)
-            };
-            var right = new View()
-            {
-                X = Pos.Right(left),
-                Width = Dim.Fill(),
-                Height = Dim.Fill(1)
-            };
-            var helpText = new Label("Use arrow keys and Tab to move around. Ctrl+D to toggle assembly visibility. Esc to quit.")
-            {
-                Y = Pos.AnchorEnd(1)
-            };
-
-            var runtimeDepends = new FrameView("Runtime depends")
-            {
-                Width = Dim.Fill(),
-                Height = Dim.Percent(33f)
-            };
-            var packageDepends = new FrameView("Package depends")
-            {
-                Y = Pos.Bottom(runtimeDepends),
-                Width = Dim.Fill(),
-                Height = Dim.Percent(50f)
-            };
-            var reverseDepends = new FrameView("Reverse depends")
-            {
-                Y = Pos.Bottom(packageDepends),
-                Width = Dim.Fill(),
-                Height = Dim.Fill()
-            };
-
-            var orderedDependencyList = graph.Nodes.OrderBy(x => x.Id).ToImmutableList();
-            var dependenciesView = new ListView(orderedDependencyList)
-            {
-                CanFocus = true,
-                AllowsMarking = false
-            };
-            left.Add(dependenciesView);
-            var runtimeDependsView = new ListView(Array.Empty<Node>())
-            {
-                CanFocus = true,
-                AllowsMarking = false
-            };
-            runtimeDepends.Add(runtimeDependsView);
-            var packageDependsView = new ListView(Array.Empty<Node>())
-            {
-                CanFocus = true,
-                AllowsMarking = false
-            };
-            packageDepends.Add(packageDependsView);
-            var reverseDependsView = new ListView(Array.Empty<Node>())
-            {
-                CanFocus = true,
-                AllowsMarking = false
-            };
-            reverseDepends.Add(reverseDependsView);
-
-            right.Add(runtimeDepends, packageDepends, reverseDepends);
-            top.Add(left, right, helpText);
-            Application.Top.Add(top);
-
-            top.Dependencies = orderedDependencyList;
-            top.VisibleDependencies = orderedDependencyList;
-            top.DependenciesView = dependenciesView;
-
-            dependenciesView.SelectedItem = 0;
-            UpdateLists();
-
-            dependenciesView.SelectedChanged += UpdateLists;
-
-            Application.Run();
-
-            void UpdateLists()
-            {
-                var selectedNode = top.VisibleDependencies[dependenciesView.SelectedItem];
-
-                runtimeDependsView.SetSource(graph.Edges.Where(x => x.Start.Equals(selectedNode) && x.End is AssemblyReferenceNode)
-                    .Select(x => x.End).ToImmutableList());
-                packageDependsView.SetSource(graph.Edges.Where(x => x.Start.Equals(selectedNode) && x.End is PackageReferenceNode)
-                    .Select(x => $"{x.End}{(string.IsNullOrEmpty(x.Label) ? string.Empty : " (Wanted: " + x.Label + ")")}").ToImmutableList());
-                reverseDependsView.SetSource(graph.Edges.Where(x => x.End.Equals(selectedNode))
-                    .Select(x => $"{x.Start}{(string.IsNullOrEmpty(x.Label) ? string.Empty : " (Wanted: " + x.Label + ")")}").ToImmutableList());
-            }
+            return graph;
         }
 
-        private class CustomWindow : Window
+        private class AppWindow : Window
         {
-            public CustomWindow() : base("Depends", 0)
+            private readonly DependencyGraph _graph;
+            private readonly ImmutableList<Node> _dependencies;
+            private ImmutableList<Node> _visibleDependencies;
+            private bool _assembliesVisible;
+            private int _lastSelectedDependencyIndex;
+
+            private readonly ListView _dependenciesView;
+            private readonly ListView _runtimeDependsView;
+            private readonly ListView _packageDependsView;
+            private readonly ListView _reverseDependsView;
+
+            class DependsListItemModel
             {
+                public Node Node { get; }
+                public string DisplayText { get; }
+
+                public DependsListItemModel(Node node, string label)
+                {
+                    Node = node ?? throw new ArgumentNullException(nameof(node));
+                    DisplayText = $"{node}{(string.IsNullOrEmpty(label) ? string.Empty : " (Wanted: " + label + ")")}";
+                }
+
+                public override string ToString()
+                {
+                    return DisplayText;
+                }
+            }
+
+            public AppWindow(DependencyGraph graph) : base("Depends", 0)
+            {
+                _graph = graph ?? throw new ArgumentNullException(nameof(graph));
+                _dependencies = _graph.Nodes.OrderBy(x => x.Id).ToImmutableList();
+                _visibleDependencies = _dependencies;
+                _assembliesVisible = true;
+                _lastSelectedDependencyIndex = -1;
+
                 ColorScheme = new ColorScheme
                 {
                     Focus = Application.Driver.MakeAttribute(Color.Black, Color.White),
                     Normal = Application.Driver.MakeAttribute(Color.White, Color.Black),
                     HotFocus = Application.Driver.MakeAttribute(Color.Black, Color.White),
-                    HotNormal = Application.Driver.MakeAttribute(Color.Black, Color.White)
+                    HotNormal = Application.Driver.MakeAttribute(Color.White, Color.Black)
                 };
+
+                var left = new FrameView("Dependencies")
+                {
+                    Width = Dim.Percent(50),
+                    Height = Dim.Fill(1)
+                };
+                var right = new View()
+                {
+                    X = Pos.Right(left),
+                    Width = Dim.Fill(),
+                    Height = Dim.Fill(1)
+                };
+                var helpText = new Label("Use arrow keys and Tab to move around. Ctrl+D to toggle assembly visibility. Esc to quit.")
+                {
+                    Y = Pos.AnchorEnd(1)
+                };
+
+                var runtimeDepends = new FrameView("Runtime depends")
+                {
+                    Width = Dim.Fill(),
+                    Height = Dim.Percent(33f)
+                };
+                var packageDepends = new FrameView("Package depends")
+                {
+                    Y = Pos.Bottom(runtimeDepends),
+                    Width = Dim.Fill(),
+                    Height = Dim.Percent(33f)
+                };
+                var reverseDepends = new FrameView("Reverse depends")
+                {
+                    Y = Pos.Bottom(packageDepends),
+                    Width = Dim.Fill(),
+                    Height = Dim.Fill()
+                };
+                _dependenciesView = new ListView()
+                {
+                    CanFocus = true,
+                    AllowsMarking = false,
+                    Width = Dim.Fill(),
+                    Height = Dim.Fill()
+                };
+                left.Add(_dependenciesView);
+                _runtimeDependsView = new ListView()
+                {
+                    CanFocus = true,
+                    AllowsMarking = false,
+                    Width = Dim.Fill(),
+                    Height = Dim.Fill()
+                };
+                runtimeDepends.Add(_runtimeDependsView);
+                _packageDependsView = new ListView()
+                {
+                    CanFocus = true,
+                    AllowsMarking = false,
+                    Width = Dim.Fill(),
+                    Height = Dim.Fill()
+                };
+                packageDepends.Add(_packageDependsView);
+                _reverseDependsView = new ListView()
+                {
+                    CanFocus = true,
+                    AllowsMarking = false,
+                    Width = Dim.Fill(),
+                    Height = Dim.Fill()
+                };
+                reverseDepends.Add(_reverseDependsView);
+
+                right.Add(runtimeDepends, packageDepends, reverseDepends);
+                Add(left, right, helpText);
+
+                _runtimeDependsView.OpenSelectedItem += RuntimeDependsView_OpenSelectedItem;
+                _packageDependsView.OpenSelectedItem += PackageDependsView_OpenSelectedItem;
+                _reverseDependsView.OpenSelectedItem += ReverseDependsView_OpenSelectedItem;
+
+                _dependenciesView.SelectedItemChanged += DependenciesView_SelectedItemChanged; ;
+                _dependenciesView.SetSource(_visibleDependencies);
             }
-
-            public ListView DependenciesView { get; set; }
-            public ImmutableList<Node> Dependencies { get; set; }
-            public ImmutableList<Node> VisibleDependencies { get; set; }
-
-            private bool _assembliesVisible = true;
 
             public override bool ProcessKey(KeyEvent keyEvent)
             {
-                if (keyEvent.Key == Key.Esc)
-                {
-                    Application.RequestStop();
-                    return true;
-                }
-                if (keyEvent.Key == Key.ControlD)
+                if (keyEvent.Key == (Key.D | Key.CtrlMask))
                 {
                     _assembliesVisible = !_assembliesVisible;
+                    _visibleDependencies = _assembliesVisible ?
+                        _dependencies :
+                        _dependencies.Where(d => !(d is AssemblyReferenceNode)).ToImmutableList();
 
-                    VisibleDependencies = _assembliesVisible ?
-                        Dependencies :
-                        Dependencies.Where(d => !(d is AssemblyReferenceNode)).ToImmutableList();
-
-                    DependenciesView.SetSource(VisibleDependencies);
-
-                    DependenciesView.SelectedItem = 0;
+                    _dependenciesView.SetSource(_visibleDependencies);
+                    _lastSelectedDependencyIndex = -1;
+                    _dependenciesView.SetFocus();
                     return true;
                 }
 
                 return base.ProcessKey(keyEvent);
+            }
+
+            private void DependenciesView_SelectedItemChanged(ListViewItemEventArgs args)
+            {
+                // The ListView.SelectedItemChanged event is fired on enter (focus), see https://github.com/migueldeicaza/gui.cs/issues/831
+                // To keep the current selection in the right pane (runtime, package & reverse depends lists), call UpdateLists() only if the selected item has actually been changed.
+                if(_lastSelectedDependencyIndex != args.Item)
+                {
+                    _lastSelectedDependencyIndex = args.Item;
+                    UpdateLists();
+                }
+            }
+
+            private void RuntimeDependsView_OpenSelectedItem(ListViewItemEventArgs args)
+            {
+                if(_assembliesVisible)
+                {
+                    SetSelectedDependency((Node)args.Value);
+                }
+                // else: would be nice to provide a feedback so that the user understands that navigation is not possible.
+            }
+
+            private void PackageDependsView_OpenSelectedItem(ListViewItemEventArgs args)
+            {
+                var node = ((DependsListItemModel)args.Value).Node;
+                SetSelectedDependency(node);
+            }
+
+            private void ReverseDependsView_OpenSelectedItem(ListViewItemEventArgs args)
+            {
+                var node = ((DependsListItemModel)args.Value).Node;
+                SetSelectedDependency(node);
+            }
+
+            private void SetSelectedDependency(Node node)
+            {
+                var index = _visibleDependencies.FindIndex(x => x.Equals(node));
+                _dependenciesView.SelectedItem = index;
+                _dependenciesView.SetFocus();
+            }
+
+            private void UpdateLists()
+            {
+                var selectedNode = _visibleDependencies[_dependenciesView.SelectedItem];
+
+                _runtimeDependsView.SetSource(_graph.Edges.Where(x => x.Start.Equals(selectedNode) && x.End is AssemblyReferenceNode)
+                    .Select(x => x.End).ToImmutableList());
+                _packageDependsView.SetSource(_graph.Edges.Where(x => x.Start.Equals(selectedNode) && x.End is PackageReferenceNode)
+                    .Select(x => new DependsListItemModel(x.End, x.Label)).ToImmutableList());
+                _reverseDependsView.SetSource(_graph.Edges.Where(x => x.End.Equals(selectedNode))
+                    .Select(x => new DependsListItemModel(x.Start, x.Label)).ToImmutableList());
             }
         }
     }
