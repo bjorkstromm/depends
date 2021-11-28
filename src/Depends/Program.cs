@@ -172,8 +172,8 @@ namespace Depends
             {
                 _graph = graph ?? throw new ArgumentNullException(nameof(graph));
                 _dependencies = _graph.Nodes.OrderBy(x => x.Id).ToImmutableList();
-                _visibleDependencies = _dependencies;
-                _assembliesVisible = true;
+                _visibleDependencies = _dependencies.Where(d => !(d is AssemblyReferenceNode)).ToImmutableList();
+                _assembliesVisible = false;
                 _lastSelectedDependencyIndex = -1;
 
                 ColorScheme = new ColorScheme
