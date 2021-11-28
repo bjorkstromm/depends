@@ -195,7 +195,7 @@ namespace Depends
                     Width = Dim.Fill(),
                     Height = Dim.Fill(1)
                 };
-                var helpText = new Label("Use arrow keys and Tab to move around. Ctrl+D to toggle assembly visibility. Esc to quit.")
+                var helpText = new Label("Use arrow keys and Tab to move around. Enter to select dependency. Ctrl+D to toggle assembly visibility. Esc to quit.")
                 {
                     Y = Pos.AnchorEnd(1)
                 };
