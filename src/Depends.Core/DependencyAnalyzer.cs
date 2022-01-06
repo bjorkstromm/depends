@@ -297,6 +297,15 @@ namespace Depends.Core
                     //}
                 }
 
+                // Not all dependencies are necessarily included in the list of libraries
+                // for the current target framework and runtime identifier. Add these to libraryNodes
+                // so we can still record these dependencies.
+                foreach (var dependency in libraries.SelectMany(library => library.Dependencies))
+                {
+                    Console.WriteLine(dependency.Id);
+                    libraryNodes.TryAdd(dependency.Id, new PackageReferenceNode(dependency.Id, ""));
+                }
+
                 foreach (var library in libraries)
                 {
                     var libraryNode = library.ToNode();
