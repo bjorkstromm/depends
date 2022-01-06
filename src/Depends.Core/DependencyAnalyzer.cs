@@ -302,7 +302,6 @@ namespace Depends.Core
                 // so we can still record these dependencies.
                 foreach (var dependency in libraries.SelectMany(library => library.Dependencies))
                 {
-                    Console.WriteLine(dependency.Id);
                     libraryNodes.TryAdd(dependency.Id, new PackageReferenceNode(dependency.Id, ""));
                 }
 
