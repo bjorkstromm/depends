@@ -262,7 +262,15 @@ namespace Depends.Core
                 {
                     var libraryNode = library.ToNode();
                     builder.WithNode(libraryNode);
-                    libraryNodes.Add(libraryNode.PackageId, libraryNode);
+                    libraryNodes[libraryNode.PackageId] = libraryNode;
+
+                    // Not all dependencies are necessarily included in the list of libraries
+                    // for the current target framework and runtime identifier. Add these to libraryNodes
+                    // so we can still record these dependencies.
+                    foreach (var dependency in library.Dependencies)
+                    {
+                        libraryNodes.TryAdd(dependency.Id, new PackageReferenceNode(dependency.Id, ""));
+                    }
 
                     if (library.FrameworkAssemblies.Count > 0)
                     {
@@ -297,13 +305,6 @@ namespace Depends.Core
                     //}
                 }
 
-                // Not all dependencies are necessarily included in the list of libraries
-                // for the current target framework and runtime identifier. Add these to libraryNodes
-                // so we can still record these dependencies.
-                foreach (var dependency in libraries.SelectMany(library => library.Dependencies))
-                {
-                    libraryNodes.TryAdd(dependency.Id, new PackageReferenceNode(dependency.Id, ""));
-                }
 
                 foreach (var library in libraries)
                 {
