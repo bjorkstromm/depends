@@ -262,7 +262,20 @@ namespace Depends.Core
                 {
                     var libraryNode = library.ToNode();
                     builder.WithNode(libraryNode);
-                    libraryNodes.Add(libraryNode.PackageId, libraryNode);
+
+                    // Overwrite any previous additions that may have been added by the loop below.
+                    libraryNodes[libraryNode.PackageId] = libraryNode;
+
+                    // Not all dependencies are necessarily included in the list of libraries
+                    // for the current target framework and runtime identifier. Add these to libraryNodes
+                    // so we can still record these dependencies.
+                    foreach (var dependency in library.Dependencies)
+                    {
+                        // Add min version in version range if this dependency doesn't exist
+                        libraryNodes.TryAdd(
+                            dependency.Id,
+                            new PackageReferenceNode(dependency.Id, dependency.VersionRange.MinVersion.ToString()));
+                    }
 
                     if (library.FrameworkAssemblies.Count > 0)
                     {
@@ -296,6 +309,7 @@ namespace Depends.Core
                     //        .Select(x => new Edge(libraryNode, x)));
                     //}
                 }
+
 
                 foreach (var library in libraries)
                 {
