@@ -233,11 +233,11 @@ namespace Depends.Core
 
                 // Old csproj
 
-                var oldStylePackageReferences = analyzerResult.GetItems("Reference").Where(x => x.ItemSpec.Contains("Version"));
+                var oldStylePackageReferences = analyzerResult.GetItems("Reference").Where(x => x.ItemSpec.Contains("Version="));
                 foreach (var reference in oldStylePackageReferences)
                 {
                     var split = reference.ItemSpec.Split(',');
-                    var version = split.Single(s => s.Contains("Version"))?.Split('=')[1];
+                    var version = split.Single(s => s.Contains("Version="))?.Split('=')[1];
                     var name = reference.ItemSpec.Split(',')[0];
                     var node = new PackageReferenceNode(name, version);
                     builder.WithNode(node);
