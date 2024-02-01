@@ -56,8 +56,9 @@ namespace Depends
         // SOFTWARE.
         //
         // https://github.com/jerriep/dotnet-outdated/blob/b2c9e99c530a64e246ac529bbdc42ddde19b1e1a/src/DotNetOutdated.Core/Services/ProjectDiscoveryService.cs
-        // ReSharper disable once UnusedMember.Local
+#pragma warning disable IDE0051
         private ValidationResult OnValidate()
+#pragma warning restore IDE0051
         {
             if (!(File.Exists(Project) || Directory.Exists(Project)))
             {
@@ -104,8 +105,9 @@ namespace Depends
             return ValidationResult.Success;
         }
 
-        // ReSharper disable once UnusedMember.Local
+#pragma warning disable IDE0051
         private void OnExecute()
+#pragma warning restore IDE0051
         {
             var loggerFactory = LoggerFactory.Create(builder => builder
                 .SetMinimumLevel(Verbosity)
@@ -172,7 +174,7 @@ namespace Depends
             {
                 _graph = graph ?? throw new ArgumentNullException(nameof(graph));
                 _dependencies = _graph.Nodes.OrderBy(x => x.Id).ToImmutableList();
-                _visibleDependencies = _dependencies.Where(d => !(d is AssemblyReferenceNode)).ToImmutableList();
+                _visibleDependencies = _dependencies.Where(d => d is not AssemblyReferenceNode).ToImmutableList();
                 _assembliesVisible = false;
                 _lastSelectedDependencyIndex = -1;
 
@@ -268,7 +270,7 @@ namespace Depends
                     _assembliesVisible = !_assembliesVisible;
                     _visibleDependencies = _assembliesVisible ?
                         _dependencies :
-                        _dependencies.Where(d => !(d is AssemblyReferenceNode)).ToImmutableList();
+                        _dependencies.Where(d => d is not AssemblyReferenceNode).ToImmutableList();
 
                     _dependenciesView.SetSource(_visibleDependencies);
                     _lastSelectedDependencyIndex = -1;
