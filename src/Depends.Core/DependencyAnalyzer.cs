@@ -28,8 +28,8 @@ namespace Depends.Core
             _ = typeof(NuGet.Common.LogLevel);
         }
 
-        private ILogger _logger;
-        private ILoggerFactory _loggerFactory;
+        private readonly ILogger _logger;
+        private readonly ILoggerFactory _loggerFactory;
 
         public DependencyAnalyzer(ILoggerFactory loggerFactory)
         {
@@ -45,77 +45,75 @@ namespace Depends.Core
             var nuGetFramework = NuGetFramework.ParseFolder(framework);
             var nugetLogger = _logger.AsNuGetLogger();
 
-            using (var cacheContext = new SourceCacheContext())
+            using var cacheContext = new SourceCacheContext();
+            var repositories = sourceRepositoryProvider.GetRepositories();
+            var resolvedPackages = new ConcurrentDictionary<PackageIdentity, SourcePackageDependencyInfo>(PackageIdentityComparer.Default);
+            DependencyAnalyzer.ResolvePackage(package, nuGetFramework, cacheContext, nugetLogger, repositories, resolvedPackages).Wait();
+
+            var availablePackages = new HashSet<SourcePackageDependencyInfo>(resolvedPackages.Values);
+
+            var resolverContext = new PackageResolverContext(
+                DependencyBehavior.Lowest,
+                new[] { packageId },
+                Enumerable.Empty<string>(),
+                Enumerable.Empty<PackageReference>(),
+                Enumerable.Empty<PackageIdentity>(),
+                availablePackages,
+                sourceRepositoryProvider.GetRepositories().Select(s => s.PackageSource),
+                nugetLogger);
+
+            var resolver = new PackageResolver();
+            var prunedPackages = resolver.Resolve(resolverContext, CancellationToken.None)
+                .Select(x => resolvedPackages[x]);
+
+            var rootNode = new PackageReferenceNode(package.Id, package.Version.ToString());
+            var packageNodes = new Dictionary<string, PackageReferenceNode>(StringComparer.OrdinalIgnoreCase);
+            var builder = new DependencyGraph.Builder(rootNode);
+
+            foreach (var target in prunedPackages)
             {
-                var repositories = sourceRepositoryProvider.GetRepositories();
-                var resolvedPackages = new ConcurrentDictionary<PackageIdentity, SourcePackageDependencyInfo>(PackageIdentityComparer.Default);
-                ResolvePackage(package, nuGetFramework, cacheContext, nugetLogger, repositories, resolvedPackages).Wait();
+                var downloadResource = target.Source.GetResource<DownloadResource>();
+                var downloadResult = downloadResource.GetDownloadResourceResultAsync(new PackageIdentity(target.Id, target.Version),
+                    new PackageDownloadContext(cacheContext),
+                    SettingsUtility.GetGlobalPackagesFolder(settings),
+                    nugetLogger, CancellationToken.None).Result;
 
-                var availablePackages = new HashSet<SourcePackageDependencyInfo>(resolvedPackages.Values);
+                var libItems = downloadResult.PackageReader.GetLibItems();
+                var reducer = new FrameworkReducer();
+                var nearest = reducer.GetNearest(nuGetFramework, libItems.Select(x => x.TargetFramework));
 
-                var resolverContext = new PackageResolverContext(
-                    DependencyBehavior.Lowest,
-                    new[] { packageId },
-                    Enumerable.Empty<string>(),
-                    Enumerable.Empty<PackageReference>(),
-                    Enumerable.Empty<PackageIdentity>(),
-                    availablePackages,
-                    sourceRepositoryProvider.GetRepositories().Select(s => s.PackageSource),
-                    nugetLogger);
+                var assemblyReferences = libItems
+                    .Where(x => x.TargetFramework.Equals(nearest))
+                    .SelectMany(x => x.Items)
+                    .Where(x => Path.GetExtension(x).Equals(".dll", StringComparison.OrdinalIgnoreCase))
+                    .Select(x => new AssemblyReferenceNode(Path.GetFileName(x)));
 
-                var resolver = new PackageResolver();
-                var prunedPackages = resolver.Resolve(resolverContext, CancellationToken.None)
-                    .Select(x => resolvedPackages[x]);
+                var frameworkItems = downloadResult.PackageReader.GetFrameworkItems();
+                nearest = reducer.GetNearest(nuGetFramework, frameworkItems.Select(x => x.TargetFramework));
 
-                var rootNode = new PackageReferenceNode(package.Id, package.Version.ToString());
-                var packageNodes = new Dictionary<string, PackageReferenceNode>(StringComparer.OrdinalIgnoreCase);
-                var builder = new DependencyGraph.Builder(rootNode);
+                assemblyReferences = assemblyReferences.Concat(frameworkItems
+                    .Where(x => x.TargetFramework.Equals(nearest))
+                    .SelectMany(x => x.Items)
+                    .Select(x => new AssemblyReferenceNode(x)));
 
-                foreach (var target in prunedPackages)
-                {
-                    var downloadResource = target.Source.GetResource<DownloadResource>();
-                    var downloadResult = downloadResource.GetDownloadResourceResultAsync(new PackageIdentity(target.Id, target.Version),
-                        new PackageDownloadContext(cacheContext),
-                        SettingsUtility.GetGlobalPackagesFolder(settings),
-                        nugetLogger, CancellationToken.None).Result;
-
-                    var libItems = downloadResult.PackageReader.GetLibItems();
-                    var reducer = new FrameworkReducer();
-                    var nearest = reducer.GetNearest(nuGetFramework, libItems.Select(x => x.TargetFramework));
-
-                    var assemblyReferences = libItems
-                        .Where(x => x.TargetFramework.Equals(nearest))
-                        .SelectMany(x => x.Items)
-                        .Where(x => Path.GetExtension(x).Equals(".dll", StringComparison.OrdinalIgnoreCase))
-                        .Select(x => new AssemblyReferenceNode(Path.GetFileName(x)));
-
-                    var frameworkItems = downloadResult.PackageReader.GetFrameworkItems();
-                    nearest = reducer.GetNearest(nuGetFramework, frameworkItems.Select(x => x.TargetFramework));
-
-                    assemblyReferences = assemblyReferences.Concat(frameworkItems
-                        .Where(x => x.TargetFramework.Equals(nearest))
-                        .SelectMany(x => x.Items)
-                        .Select(x => new AssemblyReferenceNode(x)));
-
-                    var packageReferenceNode = new PackageReferenceNode(target.Id, target.Version.ToString());
-                    builder.WithNode(packageReferenceNode);
-                    builder.WithNodes(assemblyReferences);
-                    builder.WithEdges(assemblyReferences.Select(x => new Edge(packageReferenceNode, x)));
-                    packageNodes.Add(target.Id, packageReferenceNode);
-                }
-
-                foreach (var target in prunedPackages)
-                {
-                    var packageReferenceNode = packageNodes[target.Id];
-                    builder.WithEdges(target.Dependencies.Select(x =>
-                        new Edge(packageReferenceNode, packageNodes[x.Id], x.VersionRange.ToString())));
-                }
-
-                return builder.Build();
+                var packageReferenceNode = new PackageReferenceNode(target.Id, target.Version.ToString());
+                builder.WithNode(packageReferenceNode);
+                builder.WithNodes(assemblyReferences);
+                builder.WithEdges(assemblyReferences.Select(x => new Edge(packageReferenceNode, x)));
+                packageNodes.Add(target.Id, packageReferenceNode);
             }
+
+            foreach (var target in prunedPackages)
+            {
+                var packageReferenceNode = packageNodes[target.Id];
+                builder.WithEdges(target.Dependencies.Select(x =>
+                    new Edge(packageReferenceNode, packageNodes[x.Id], x.VersionRange.ToString())));
+            }
+
+            return builder.Build();
         }
 
-        private async Task ResolvePackage(PackageIdentity package,
+        private static async Task ResolvePackage(PackageIdentity package,
             NuGetFramework framework,
             SourceCacheContext cacheContext,
             NuGet.Common.ILogger logger,
@@ -152,7 +150,7 @@ namespace Depends.Core
                 {
                     await Task.WhenAll(dependencyInfo.Dependencies.Select(dependency =>
                     {
-                        return ResolvePackage(new PackageIdentity(dependency.Id, dependency.VersionRange.MinVersion),
+                        return DependencyAnalyzer.ResolvePackage(new PackageIdentity(dependency.Id, dependency.VersionRange.MinVersion),
                             framework, cacheContext, logger, repositories, availablePackages);
                     }));
                 }
@@ -170,7 +168,7 @@ namespace Depends.Core
             var builder = new DependencyGraph.Builder(solutionNode);
             foreach (var project in analyzerManager.Projects.Where(p => p.Value.ProjectInSolution.ProjectType == SolutionProjectType.KnownToBeMSBuildFormat))
             {
-                builder = CreateBuilder(project.Value, project.Key, builder, framework);
+                builder = DependencyAnalyzer.CreateBuilder(project.Value, project.Key, builder, framework);
             }
 
             return builder.Build();
@@ -185,7 +183,7 @@ namespace Depends.Core
 
             if (string.IsNullOrWhiteSpace(projectPath))
             {
-                throw new ArgumentException(nameof(projectPath));
+                throw new ArgumentException("Empty parameter", nameof(projectPath));
             }
 
             if (!File.Exists(projectPath))
@@ -194,22 +192,16 @@ namespace Depends.Core
             }
 
             var projectAnalyzer = analyzerManager.GetProject(projectPath);
-            return CreateBuilder(projectAnalyzer, projectPath, null, framework).Build();
+            return DependencyAnalyzer.CreateBuilder(projectAnalyzer, projectPath, null, framework).Build();
         }
 
-        private DependencyGraph.Builder CreateBuilder(IProjectAnalyzer  projectAnalyzer, string projectPath, DependencyGraph.Builder builder = null, string framework = null)
+        private static DependencyGraph.Builder CreateBuilder(IProjectAnalyzer  projectAnalyzer, string projectPath, DependencyGraph.Builder builder = null, string framework = null)
         {
             var analyzeResults = string.IsNullOrEmpty(framework) ?
                 projectAnalyzer.Build() : projectAnalyzer.Build(framework);
 
-            var analyzerResult = string.IsNullOrEmpty(framework) ?
-                analyzeResults.FirstOrDefault() : analyzeResults[framework];
-
-            if (analyzerResult == null)
-            {
-                // Todo: Something went wrong, log and return better exception.
-                throw new InvalidOperationException("Unable to load project.");
-            }
+            var analyzerResult = (string.IsNullOrEmpty(framework) ?
+                analyzeResults.FirstOrDefault() : analyzeResults[framework]) ?? throw new InvalidOperationException("Unable to load project.");
             var projectNode = new ProjectReferenceNode(projectPath);
             if (builder == null)
             {
