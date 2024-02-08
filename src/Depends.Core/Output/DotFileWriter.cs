@@ -69,10 +69,7 @@ namespace Depends.Core.Output
 
         private static void Write(Node root, ImmutableHashSet<Edge> edges, TextWriter writer, IDictionary<Node, int> ranks, ISet<Edge> visited = null, int depth = 0)
         {
-            if (visited == null)
-            {
-                visited = new HashSet<Edge>();
-            }
+            visited ??= new HashSet<Edge>();
 
             if (ranks.TryGetValue(root, out var currentRank))
             {

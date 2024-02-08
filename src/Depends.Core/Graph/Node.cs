@@ -12,7 +12,7 @@ namespace Depends.Core.Graph
         {
             if (string.IsNullOrWhiteSpace(id))
             {
-                throw new ArgumentException(nameof(id));
+                throw new ArgumentException("Empty parameter", nameof(id));
             }
 
             Id = id;
@@ -20,14 +20,14 @@ namespace Depends.Core.Graph
 
         public bool Equals(Node other)
         {
-            if (ReferenceEquals(null, other)) return false;
+            if (other is null) return false;
             if (ReferenceEquals(this, other)) return true;
             return string.Equals(Id, other.Id, StringComparison.OrdinalIgnoreCase);
         }
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
+            if (obj is null) return false;
             if (ReferenceEquals(this, obj)) return true;
             return obj is Node node && Equals(node);
         }
