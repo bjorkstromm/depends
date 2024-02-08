@@ -2,16 +2,16 @@
 
   <PropertyGroup>
     <TargetFrameworks>net8.0</TargetFrameworks>
-    <ToolCommandName>dotnet-dependency</ToolCommandName>
+    <ToolCommandName>dotnet-depends</ToolCommandName>
     <PackAsTool>True</PackAsTool>
     <OutputType>Exe</OutputType>
-    <PackageId>dotnet-dependency</PackageId>
-    <Title>dotnet-dependency</Title>
-    <Authors>daghsentinel</Authors>
+    <PackageId>dotnet-depends</PackageId>
+    <Title>dotnet-depends</Title>
+    <Authors>bjorkstromm and contributors</Authors>
     <Description>Dependency explorer for .NET</Description>
-    <Copyright>2024 Dag H. Baardsen</Copyright>
+    <Copyright>2018 Martin Björkström</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/daghsentinel/depends</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/bjorkstromm/depends</PackageProjectUrl>
     <PackageIcon>icon.png</PackageIcon>
   </PropertyGroup>
 
