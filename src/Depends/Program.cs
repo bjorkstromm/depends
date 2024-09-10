@@ -323,11 +323,11 @@ namespace Depends
                 var selectedNode = _visibleDependencies[_dependenciesView.SelectedItem];
 
                 _runtimeDependsView.SetSource(_graph.Edges.Where(x => x.Start.Equals(selectedNode) && x.End is AssemblyReferenceNode)
-                    .Select(x => x.End).ToImmutableList());
+                    .Select(x => x.End).OrderBy(x => x.Id).ToImmutableList());
                 _packageDependsView.SetSource(_graph.Edges.Where(x => x.Start.Equals(selectedNode) && x.End is PackageReferenceNode)
-                    .Select(x => new DependsListItemModel(x.End, x.Label)).ToImmutableList());
+                    .Select(x => new DependsListItemModel(x.End, x.Label)).OrderBy(x => x.DisplayText).ToImmutableList());
                 _reverseDependsView.SetSource(_graph.Edges.Where(x => x.End.Equals(selectedNode))
-                    .Select(x => new DependsListItemModel(x.Start, x.Label)).ToImmutableList());
+                    .Select(x => new DependsListItemModel(x.Start, x.Label)).OrderBy(x => x.DisplayText).ToImmutableList());
             }
         }
     }
