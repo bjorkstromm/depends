@@ -6,18 +6,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Buildalyzer" Version="6.0.4" />
-    <PackageReference Include="MinVer" Version="4.3.0">
+    <PackageReference Include="Buildalyzer" Version="7.0.2" />
+    <PackageReference Include="MinVer" Version="6.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="NuGet.ProjectModel" Version="6.8.0" />
-    <PackageReference Include="NuGet.Resolver" Version="6.8.0" />
+    <PackageReference Include="NuGet.ProjectModel" Version="6.11.0" />
+    <PackageReference Include="NuGet.Resolver" Version="6.11.0" />
 
     <!--
     Explicitly disable warning for implicit dependency as done in the parent library (Buildalyzer) here:
     https://github.com/daveaglick/Buildalyzer/blob/e30d44755ad17e8abf3efb53acc4a5d4f5a77ea7/src/Buildalyzer/Buildalyzer.csproj#L22-L24 -->
-    <PackageReference Include="Microsoft.Build" Version="17.8.3">
+    <PackageReference Include="Microsoft.Build" Version="17.11.4">
       <NoWarn>NU1701</NoWarn>
     </PackageReference>
   </ItemGroup>
