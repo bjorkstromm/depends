@@ -152,7 +152,7 @@ namespace Depends.Core
                 {
                     await Task.WhenAll(dependencyInfo.Dependencies.Select(dependency =>
                     {
-                        return DependencyAnalyzer.ResolvePackage(new PackageIdentity(dependency.Id, dependency.VersionRange.MinVersion),
+                        return ResolvePackage(new PackageIdentity(dependency.Id, dependency.VersionRange.MinVersion),
                             framework, cacheContext, logger, repositories, availablePackages);
                     }));
                 }
@@ -170,7 +170,7 @@ namespace Depends.Core
             var builder = new DependencyGraph.Builder(solutionNode);
             foreach (var project in analyzerManager.Projects.Where(p => p.Value.ProjectInSolution.ProjectType == SolutionProjectType.KnownToBeMSBuildFormat))
             {
-                builder = DependencyAnalyzer.CreateBuilder(project.Value, project.Key, builder, framework);
+                builder = CreateBuilder(project.Value, project.Key, builder, framework);
             }
 
             return builder.Build();
@@ -194,7 +194,7 @@ namespace Depends.Core
             }
 
             var projectAnalyzer = analyzerManager.GetProject(projectPath);
-            return DependencyAnalyzer.CreateBuilder(projectAnalyzer, projectPath, null, framework).Build();
+            return CreateBuilder(projectAnalyzer, projectPath, null, framework).Build();
         }
 
         private static DependencyGraph.Builder CreateBuilder(IProjectAnalyzer  projectAnalyzer, string projectPath, DependencyGraph.Builder builder = null, string framework = null)
