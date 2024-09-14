@@ -16,8 +16,8 @@ namespace Depends.Core.Extensions
 
         private class NuGetLogger : ILogger
         {
-            private MEL.ILogger _logger;
-            private Dictionary<LogLevel, MEL.LogLevel> _logLevelMap = new Dictionary<LogLevel, MEL.LogLevel>
+            private readonly MEL.ILogger _logger;
+            private readonly Dictionary<LogLevel, MEL.LogLevel> _logLevelMap = new()
             {
                 [LogLevel.Debug] = MEL.LogLevel.Debug,
                 [LogLevel.Error] = MEL.LogLevel.Error,
@@ -27,7 +27,7 @@ namespace Depends.Core.Extensions
                 [LogLevel.Warning] = MEL.LogLevel.Warning
             };
 
-            public NuGetLogger(Microsoft.Extensions.Logging.ILogger logger)
+            public NuGetLogger(MEL.ILogger logger)
             {
                 _logger = logger;
             }

@@ -8,17 +8,17 @@ namespace Depends.Core.Extensions
     {
         public static bool IsPackage(this LockFileTargetLibrary library)
         {
-            return library.Type.Equals("package", StringComparison.OrdinalIgnoreCase);
+            return library.Type != null && library.Type.Equals("package", StringComparison.OrdinalIgnoreCase);
         }
 
         public static PackageReferenceNode ToNode(this LockFileTargetLibrary library)
         {
             if (!library.IsPackage())
             {
-                throw new ArgumentException(nameof(library));
+                throw new ArgumentException("Empty parameter", nameof(library));
             }
 
-            return new PackageReferenceNode(library.Name, library.Version.ToNormalizedString());
+            return new PackageReferenceNode(library.Name, library.Version?.ToNormalizedString());
         }
     }
 }

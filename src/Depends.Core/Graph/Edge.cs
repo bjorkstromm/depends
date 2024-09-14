@@ -22,27 +22,21 @@ namespace Depends.Core.Graph
 
         public bool Equals(Edge other)
         {
-            if (ReferenceEquals(null, other)) return false;
+            if (other is null) return false;
             if (ReferenceEquals(this, other)) return true;
             return Equals(Start, other.Start) && Equals(End, other.End) && string.Equals(Label, other.Label);
         }
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
+            if (obj is null) return false;
             if (ReferenceEquals(this, obj)) return true;
             return obj is Edge edge && Equals(edge);
         }
 
         public override int GetHashCode()
         {
-            unchecked
-            {
-                var hashCode = (Start != null ? Start.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (End != null ? End.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (Label != null ? Label.GetHashCode() : 0);
-                return hashCode;
-            }
+            return HashCode.Combine(Start, End, Label);
         }
 
         public override string ToString()

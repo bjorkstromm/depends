@@ -7,8 +7,8 @@ namespace Depends.Core.Graph
 		public sealed class Builder
 		{
 		    private readonly Node _root;
-		    private HashSet<Node> _nodes = new HashSet<Node>();
-		    private HashSet<Edge> _edges = new HashSet<Edge>();
+		    private readonly HashSet<Node> _nodes = new();
+		    private readonly HashSet<Edge> _edges = new();
 
 		    public Node Root => _root;
 

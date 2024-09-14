@@ -28,8 +28,8 @@ namespace Depends.Core
             _ = typeof(NuGet.Common.LogLevel);
         }
 
-        private ILogger _logger;
-        private ILoggerFactory _loggerFactory;
+        private readonly ILogger _logger;
+        private readonly ILoggerFactory _loggerFactory;
 
         public DependencyAnalyzer(ILoggerFactory loggerFactory)
         {
@@ -115,7 +115,7 @@ namespace Depends.Core
             }
         }
 
-        private async Task ResolvePackage(PackageIdentity package,
+        private static async Task ResolvePackage(PackageIdentity package,
             NuGetFramework framework,
             SourceCacheContext cacheContext,
             NuGet.Common.ILogger logger,
@@ -152,7 +152,7 @@ namespace Depends.Core
                 {
                     await Task.WhenAll(dependencyInfo.Dependencies.Select(dependency =>
                     {
-                        return ResolvePackage(new PackageIdentity(dependency.Id, dependency.VersionRange.MinVersion),
+                        return DependencyAnalyzer.ResolvePackage(new PackageIdentity(dependency.Id, dependency.VersionRange.MinVersion),
                             framework, cacheContext, logger, repositories, availablePackages);
                     }));
                 }
@@ -170,7 +170,7 @@ namespace Depends.Core
             var builder = new DependencyGraph.Builder(solutionNode);
             foreach (var project in analyzerManager.Projects.Where(p => p.Value.ProjectInSolution.ProjectType == SolutionProjectType.KnownToBeMSBuildFormat))
             {
-                builder = CreateBuilder(project.Value, project.Key, builder, framework);
+                builder = DependencyAnalyzer.CreateBuilder(project.Value, project.Key, builder, framework);
             }
 
             return builder.Build();
@@ -185,7 +185,7 @@ namespace Depends.Core
 
             if (string.IsNullOrWhiteSpace(projectPath))
             {
-                throw new ArgumentException(nameof(projectPath));
+                throw new ArgumentException("Empty parameter", nameof(projectPath));
             }
 
             if (!File.Exists(projectPath))
@@ -194,22 +194,16 @@ namespace Depends.Core
             }
 
             var projectAnalyzer = analyzerManager.GetProject(projectPath);
-            return CreateBuilder(projectAnalyzer, projectPath, null, framework).Build();
+            return DependencyAnalyzer.CreateBuilder(projectAnalyzer, projectPath, null, framework).Build();
         }
 
-        private DependencyGraph.Builder CreateBuilder(IProjectAnalyzer  projectAnalyzer, string projectPath, DependencyGraph.Builder builder = null, string framework = null)
+        private static DependencyGraph.Builder CreateBuilder(IProjectAnalyzer  projectAnalyzer, string projectPath, DependencyGraph.Builder builder = null, string framework = null)
         {
             var analyzeResults = string.IsNullOrEmpty(framework) ?
                 projectAnalyzer.Build() : projectAnalyzer.Build(framework);
 
-            var analyzerResult = string.IsNullOrEmpty(framework) ?
-                analyzeResults.FirstOrDefault() : analyzeResults[framework];
-
-            if (analyzerResult == null)
-            {
-                // Todo: Something went wrong, log and return better exception.
-                throw new InvalidOperationException("Unable to load project.");
-            }
+            var analyzerResult = (string.IsNullOrEmpty(framework) ?
+                analyzeResults.FirstOrDefault() : analyzeResults[framework]) ?? throw new InvalidOperationException("Unable to load project.");
             var projectNode = new ProjectReferenceNode(projectPath);
             if (builder == null)
             {
