@@ -17,7 +17,7 @@
     <!--
     Explicitly disable warning for implicit dependency as done in the parent library (Buildalyzer) here:
     https://github.com/daveaglick/Buildalyzer/blob/e30d44755ad17e8abf3efb53acc4a5d4f5a77ea7/src/Buildalyzer/Buildalyzer.csproj#L22-L24 -->
-    <PackageReference Include="Microsoft.Build" Version="17.11.4">
+    <PackageReference Include="Microsoft.Build" Version="17.11.48">
       <NoWarn>NU1701</NoWarn>
     </PackageReference>
   </ItemGroup>
